@@ -17,6 +17,11 @@ export { isPrimaryNavigationSession };
 export type SidebarSession = {
 	session: SessionMeta;
 	pinned: boolean;
+	/**
+	 * 血缘树形层级（根 = 0）。可选字段：置顶区 / 无血缘时缺省，按 0 渲染不缩进——
+	 * 默认行为与上游一致，上游改了也不会崩。
+	 */
+	depth?: number;
 };
 
 /** 一个可折叠分组（日常空间与每个项目同构，渲染侧共用一套行组件） */
@@ -60,6 +65,8 @@ function mergeSessionMeta(history: SessionMeta, memory: SessionMeta): SessionMet
 		...memory,
 		createdAt: history.createdAt,
 		modifiedAt: memory.modifiedAt ?? history.modifiedAt,
+		// 血缘字段同 createdAt：稳定元数据以磁盘（历史）为准——活跃 meta（registry.toMeta）没有它
+		parentSessionPath: history.parentSessionPath,
 	};
 }
 
@@ -131,13 +138,63 @@ function matchesSearch(session: SessionMeta, query: string): boolean {
 	return (session.name ?? "").toLowerCase().includes(query) || session.sessionId.includes(query);
 }
 
-/** 组内会话：按最后活动倒序（置顶分区前置由 partitionSessionsByPin 负责，它要求输入已排序） */
+/**
+ * 会话血缘树形化（纯函数）：把一组会话按 `parentSessionPath` 聚成森林，再展平成带 `depth`
+ * 的渲染序列（供 `SessionRow` 缩进 + 父连线）。规则：
+ *
+ * - 只认「父也在本列表里」的引用：`parentSessionPath` 命中列表内某会话（按 sessionFile 比对）→ 挂为子；
+ *   父不在列表（文件已删 / 跨组 / 被搜索过滤）→ 当根显示（与 TUI `buildSessionTree` 的 byPath.has 一致）。
+ * - 排序：父会话之间按最后活动倒序，子会话紧跟父会话下面、子内也按最后活动倒序。
+ * - 置顶分区由调用方 `groupSessions` 先行完成（置顶会话不参与血缘结构），本函数只见非置顶。
+ * - 搜索不带父子关系：被搜索过滤掉父时，子自然当根，零额外逻辑。
+ */
+function buildSessionForest(
+	list: readonly SessionMeta[],
+): { session: SessionMeta; depth: number }[] {
+	const byPath = new Map<string, SessionMeta[]>();
+	const roots: SessionMeta[] = [];
+	const bySessionFile = new Map(list.map((session) => [session.sessionFile, session]));
+	for (const session of list) {
+		const parent = session.parentSessionPath ? bySessionFile.get(session.parentSessionPath) : undefined;
+		if (parent) {
+			const siblings = byPath.get(parent.sessionId);
+			if (siblings) siblings.push(session);
+			else byPath.set(parent.sessionId, [session]);
+		} else {
+			roots.push(session);
+		}
+	}
+	const byActivity = (a: SessionMeta, b: SessionMeta) =>
+		(b.modifiedAt ?? b.createdAt) - (a.modifiedAt ?? a.createdAt);
+	roots.sort(byActivity);
+	for (const siblings of byPath.values()) siblings.sort(byActivity);
+
+	const rows: { session: SessionMeta; depth: number }[] = [];
+	const visit = (session: SessionMeta, depth: number) => {
+		rows.push({ session, depth });
+		for (const child of byPath.get(session.sessionId) ?? []) visit(child, depth + 1);
+	};
+	for (const root of roots) visit(root, 0);
+	return rows;
+}
+
+/** 组内会话：置顶扁平在前（不看父子关系）→ 其余按血缘树形化（父间倒序、子紧跟父、子内倒序） */
 function groupSessions(list: readonly SessionMeta[], pinned: ReadonlySet<string>): SidebarSession[] {
 	const sorted = [...list].sort((a, b) => (b.modifiedAt ?? b.createdAt) - (a.modifiedAt ?? a.createdAt));
-	return partitionSessionsByPin(sorted, [...pinned]).map((session) => ({
-		session,
-		pinned: pinned.has(session.sessionId),
-	}));
+	const partitioned = partitionSessionsByPin(sorted, [...pinned]);
+	const pinSet = new Set(pinned);
+	const pinnedRows: SidebarSession[] = partitioned
+		.filter((session) => pinSet.has(session.sessionId))
+		.map((session) => ({ session, pinned: true }));
+	const rest = partitioned.filter((session) => !pinSet.has(session.sessionId));
+	return [
+		...pinnedRows,
+		...buildSessionForest(rest).map((row) => ({
+			session: row.session,
+			pinned: false,
+			depth: row.depth,
+		})),
+	];
 }
 
 /**

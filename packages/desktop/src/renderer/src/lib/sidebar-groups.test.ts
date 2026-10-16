@@ -74,6 +74,87 @@ describe("deriveSidebarGroups · 组内排序", () => {
 	});
 });
 
+describe("deriveSidebarGroups · 血缘树形化", () => {
+	/** 构造带会话文件路径 + 血缘引用的会话；parentSessionPath 引用父的 sessionFile */
+	function fork(id: string, cwd: string, modifiedAt: number, parentFile?: string) {
+		return {
+			...session(id, cwd, modifiedAt),
+			sessionFile: `/sessions/${id}.jsonl`,
+			parentSessionPath: parentFile,
+		};
+	}
+
+	it("子会话紧跟父会话下面（子内按最后活动倒序），带 depth", () => {
+		const root = fork("root", P1, 100);
+		const childA = fork("child-a", P1, 200, root.sessionFile);
+		const childB = fork("child-b", P1, 300, root.sessionFile);
+		const result = derive({ sessions: [root, childA, childB], projects: [project(P1, 0)] });
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["root", "child-b", "child-a"]);
+		expect(alpha?.sessions.map((s) => s.depth)).toEqual([0, 1, 1]);
+	});
+
+	it("父会话之间按最后活动倒序，多级嵌套 depth 递增", () => {
+		const old = fork("old", P1, 100);
+		const recent = fork("recent", P1, 500);
+		const child = fork("child", P1, 300, old.sessionFile);
+		const grandchild = fork("grandchild", P1, 400, child.sessionFile);
+		const result = derive({
+			sessions: [old, recent, grandchild, child],
+			projects: [project(P1, 0)],
+		});
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["recent", "old", "child", "grandchild"]);
+		expect(alpha?.sessions.map((s) => s.depth)).toEqual([0, 0, 1, 2]);
+	});
+
+	it("父不在列表（跨组 / 文件已删 / 被搜索过滤）→ 子当根显示", () => {
+		const orphan = fork("orphan", P1, 200, "/sessions/gone.jsonl");
+		const result = derive({ sessions: [orphan], projects: [project(P1, 0)] });
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["orphan"]);
+		expect(alpha?.sessions.map((s) => s.depth)).toEqual([0]);
+	});
+
+	it("置顶会话扁平在前、不看父子关系（depth 缺省）；其子仍留在血缘区", () => {
+		const root = fork("root", P1, 100);
+		const child = fork("child", P1, 200, root.sessionFile);
+		const result = derive({
+			sessions: [root, child],
+			projects: [project(P1, 0)],
+			pinnedSessions: ["child"],
+		});
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		// child 置顶提前（不缩进）；root 在血缘区单独成根
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["child", "root"]);
+		expect(alpha?.sessions.map((s) => s.pinned)).toEqual([true, false]);
+		expect(alpha?.sessions[0]?.depth).toBeUndefined();
+		expect(alpha?.sessions[1]?.depth).toBe(0);
+	});
+
+	it("搜索不带父子关系：命中子但不命中父时，子直接显示为根", () => {
+		const root = fork("root", P1, 100, undefined);
+		const child = fork("child-x", P1, 200, root.sessionFile);
+		const result = derive({
+			sessions: [root, child],
+			projects: [project(P1, 0)],
+			search: "child-x",
+		});
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["child-x"]);
+		expect(alpha?.sessions.map((s) => s.depth)).toEqual([0]);
+	});
+
+	it("无血缘的普通会话不受影响（depth 缺省，顺序保持倒序）", () => {
+		const a = session("a", P1, 100);
+		const b = session("b", P1, 300);
+		const result = derive({ sessions: [a, b], projects: [project(P1, 0)] });
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["b", "a"]);
+		expect(alpha?.sessions.map((s) => s.depth)).toEqual([0, 0]);
+	});
+});
+
 describe("deriveSidebarGroups · 项目区排序", () => {
 	it("置顶项目按 pinnedProjects 顺序排前，其余保持 deriveProjects 的输出顺序", () => {
 		const result = derive({
@@ -301,6 +382,21 @@ describe("mergeSidebarSessions · 稳定时间字段（打开/卸载不改变行
 			[{ sessionId: "h1", cwd: P1, active: true, messageCount: 1, createdAt: 100, modifiedAt: 1_500 }],
 		);
 		expect(merged[0]?.modifiedAt).toBe(1_500);
+	});
+
+	it("血缘字段以历史为准：内存（registry）meta 无 parentSessionPath 时不被抹掉", () => {
+		// 活跃会话 meta 来自 registry.toMeta，没有血缘字段；磁盘历史里有
+		const history: SessionMeta = {
+			...session("h1", P1, 900),
+			createdAt: 100,
+			sessionFile: "/sessions/h1.jsonl",
+			parentSessionPath: "/sessions/root.jsonl",
+		};
+		const memory: SessionMeta = { sessionId: "h1", cwd: P1, active: true, messageCount: 3, createdAt: 100 };
+		const merged = mergeSidebarSessions([history], [memory]);
+
+		expect(merged).toHaveLength(1);
+		expect(merged[0]?.parentSessionPath).toBe("/sessions/root.jsonl");
 	});
 
 	it("打开前后派生顺序完全一致（点击历史行不再下移）", () => {

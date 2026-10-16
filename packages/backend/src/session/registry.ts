@@ -108,6 +108,7 @@ export class SessionRegistry {
 			sessionId: session.sessionId,
 			sessionFile: session.sessionFile, // 内存 manager 才为空，见上（路径≠已落盘）
 			cwd,
+			parentSessionPath: session.sessionManager.getHeader()?.parentSession,
 			name: session.sessionName,
 			modelLabel: session.model?.name,
 			model: session.model ? { provider: session.model.provider, modelId: session.model.id } : null,

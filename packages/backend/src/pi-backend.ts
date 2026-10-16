@@ -151,6 +151,7 @@ function sessionInfoToMeta(
 		messageCount: info.messageCount,
 		createdAt: info.created.getTime(),
 		modifiedAt: info.modified.getTime(),
+		parentSessionPath: info.parentSessionPath,
 	};
 }
 
@@ -518,7 +519,9 @@ export class PiBackend {
 
 	async createSession(options: CreateSessionOptions): Promise<SessionMeta> {
 		const runtime = await this.getModelRuntime();
-		const cwd = options.cwd || this.options.defaultCwd || process.cwd();
+		// 与 openSession（getCwd → header 已 resolvePath）对齐：create 也归一化绝对路径、去尾斜杠，
+		// 避免同一目录因 create(带尾斜杠)/open(无尾斜杠) 被 byCwd 精确分组拆成两个项目组。
+		const cwd = resolve(options.cwd || this.options.defaultCwd || process.cwd());
 		const model =
 			options.provider && options.modelId ? runtime.getModel(options.provider, options.modelId) : undefined;
 		const session = await this.wireSession(cwd, undefined, async (deps) => {

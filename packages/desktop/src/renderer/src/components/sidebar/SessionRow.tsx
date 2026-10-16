@@ -24,12 +24,15 @@ export function SessionRow({
 	session,
 	active,
 	pinned = false,
+	depth = 0,
 	onSelect,
 	onContextMenu,
 }: {
 	session: SessionMeta;
 	active: boolean;
 	pinned?: boolean;
+	/** 血缘层级（根 = 0）：>0 时整行右移（每级 14px）并在父图标槽中心画一条竖线 */
+	depth?: number;
 	onSelect: () => void;
 	onContextMenu?: (anchor: MenuAnchor) => void;
 }) {
@@ -42,9 +45,10 @@ export function SessionRow({
 			// 可测试性只读属性（spec §6：CDP 按 sessionId 定位行，而不是靠标题文本匹配；纯属性，不影响视觉/交互）
 			data-session-id={session.sessionId}
 			data-session-active={active ? "true" : "false"}
-			className={`flex h-[31px] w-full items-center gap-2 rounded-[7px] px-1.5 text-left text-ui-135 ${
+			className={`relative flex h-[31px] w-full items-center gap-2 rounded-[7px] px-1.5 text-left text-ui-135 ${
 				active ? "bg-bubble font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink"
 			}`}
+			style={depth > 0 ? { paddingLeft: 6 + depth * 14 } : undefined}
 			onClick={onSelect}
 			onContextMenu={
 				onContextMenu
@@ -56,6 +60,14 @@ export function SessionRow({
 					: undefined
 			}
 		>
+			{/* 血缘父连线：从父图标槽中心垂直穿过子行（深度 1 时对齐根行图标中心） */}
+			{depth > 0 && (
+				<span
+					aria-hidden="true"
+					className="absolute top-0 h-full w-px bg-ink-faint/25"
+					style={{ left: 14 + (depth - 1) * 14 }}
+				/>
+			)}
 			{/* 图标槽：置顶才放图钉，不带图钉时占位不空转（保证标题 x 恒定） */}
 			<span className="grid h-4 w-4 shrink-0 place-items-center text-ink-faint" aria-hidden="true">
 				{pinned && <PinIcon size={12} />}

@@ -141,6 +141,12 @@ export interface SessionMeta {
 	createdAt: number;
 	/** 最后活动时间（unix 毫秒，历史会话列表排序/分组用） */
 	modifiedAt?: number;
+	/**
+	 * 父会话文件路径（fork/clone 来源；无则 undefined）。
+	 * 来自会话文件 header 首行的 `parentSession` 字段——TUI 用它画会话血缘树，
+	 * Percho 左栏树形缩进展示血缘也靠它。
+	 */
+	parentSessionPath?: string;
 }
 
 export interface SessionStats {

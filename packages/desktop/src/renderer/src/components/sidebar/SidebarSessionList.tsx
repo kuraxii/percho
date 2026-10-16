@@ -41,12 +41,13 @@ export function SidebarSessionList({
 		<div>
 			{/* 可测试性只读属性（验收脚本按它定位列表并断言「这里没有自己的滚动」；纯属性，不影响视觉） */}
 			<div data-sidebar-session-list="">
-				{sessions.map(({ session, pinned }) => (
+				{sessions.map(({ session, pinned, depth }) => (
 					<SessionRow
 						key={session.sessionId}
 						session={session}
 						active={session.sessionId === activeSessionId}
 						pinned={pinned}
+						depth={depth}
 						onSelect={() => onSelect(session)}
 						onContextMenu={(anchor) => onContextMenu(session, anchor)}
 					/>
