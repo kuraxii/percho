@@ -148,9 +148,7 @@ function matchesSearch(session: SessionMeta, query: string): boolean {
  * - 置顶分区由调用方 `groupSessions` 先行完成（置顶会话不参与血缘结构），本函数只见非置顶。
  * - 搜索不带父子关系：被搜索过滤掉父时，子自然当根，零额外逻辑。
  */
-function buildSessionForest(
-	list: readonly SessionMeta[],
-): { session: SessionMeta; depth: number }[] {
+function buildSessionForest(list: readonly SessionMeta[]): { session: SessionMeta; depth: number }[] {
 	const byPath = new Map<string, SessionMeta[]>();
 	const roots: SessionMeta[] = [];
 	const bySessionFile = new Map(list.map((session) => [session.sessionFile, session]));

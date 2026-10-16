@@ -1,7 +1,7 @@
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import { SessionRegistry } from "../src/session/registry";
 import type { RegisteredSession } from "../src/session/registry";
+import { SessionRegistry } from "../src/session/registry";
 
 /**
  * 构造最小 registry entry（stub session 直入私有 registry，同 session-tree-operations 手法）。

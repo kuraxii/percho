@@ -7,6 +7,7 @@ import { selectActiveCwd } from "../../lib/active-cwd";
 import { prepareImageAttachment } from "../../lib/image-attachment";
 import { RegionHost } from "../../plugins/RegionHost";
 import { UI_REGIONS } from "../../plugins/slots";
+import { selectCommandTracks, useCommandTracksStore } from "../../stores/command-tracks";
 import { COMPOSER_FOCUS_EVENT, EMPTY_DRAFT, NEW_SESSION_DRAFT_KEY, useDraftStore } from "../../stores/drafts";
 import { useSessionsStore } from "../../stores/sessions";
 import { pushToast } from "../../stores/toasts";
@@ -15,6 +16,7 @@ import { ImagePreviewOverlay } from "../chat/ImagePreview";
 import { ArrowUpIcon, PencilIcon, PlusIcon, StopIcon } from "../icons";
 import { AtMenu } from "./AtMenu";
 import { AttachmentChip } from "./AttachmentChip";
+import { CommandTracksBar } from "./CommandTracksBar";
 import { ContextRing } from "./ContextRing";
 import { resolveDroppedFilePaths } from "./drop-files";
 import { ImageTray } from "./ImageTray";
@@ -101,6 +103,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const followUpQueue = transcript.followUpQueue;
+	const commandTracks = useCommandTracksStore((s) => selectCommandTracks(s, activeSessionId));
 	/** 压缩进行中：禁发（SDK 拒绝压缩中的 prompt；提前拦截保住草稿，warn 提示代替报错丢文本） */
 	const compacting = transcript.compacting;
 	/** 输入框有内容：streaming 中按钮从停止切回发送（入队后文本清空自动切回停止） */
@@ -376,6 +379,9 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						text={followUpQueue[0] ?? ""}
 						onRestore={() => void send.handleRestoreQueue(focusTextarea)}
 					/>
+				)}
+				{commandTracks.length > 0 && activeSessionId && (
+					<CommandTracksBar tracks={commandTracks} sessionId={activeSessionId} />
 				)}
 				{/* 扩展 setEditorText 预填提示（画板⑩）：一次性来源标注，首次键入即清除 */}
 				{extensionPrefillSource && (

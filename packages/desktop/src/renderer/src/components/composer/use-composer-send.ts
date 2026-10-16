@@ -2,6 +2,7 @@ import type { ImageInput, UiError } from "@percho/shared";
 import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { useCommandTracksStore } from "../../stores/command-tracks";
 import { useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
 import { pushToast } from "../../stores/toasts";
@@ -163,6 +164,22 @@ export function useComposerSend(options: UseComposerSendOptions) {
 		options.setQuotes([]);
 		// 乐观置工作中：agent_start 事件到达前立即显示，失败后回滚
 		useTranscriptStore.getState().markAgentActive(sessionId, true);
+		// 命令跟踪槽（仅斜杠落回 = 扩展命令候选；模板/skill 由 SDK 原生处理，回执区分）：
+		// 扩展命令零事件，执行期间渲染端不可见——发送前乐观建 running 槽，
+		// prompt 受理回执驱动：handled（命令已就地执行、无模型轮次）→ done + 复位乐观置位；
+		// started/queued（模板/skill/排队轮次）→ 移除槽，由轮次事件流接管。
+		const trackId = content.startsWith("/")
+			? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+			: null;
+		if (trackId) {
+			const [cmdName, ...cmdRest] = content.slice(1).split(/\s+/);
+			useCommandTracksStore.getState().addTrack(sessionId, {
+				id: trackId,
+				name: cmdName ?? "",
+				args: cmdRest.join(" ").trim(),
+				status: "running",
+			});
+		}
 		// 乐观回显用户气泡：带图发送时 SDK 在构造用户消息**之前**先做图片归一化
 		// （Photon 缩放，全屏截图 ~1s/张，见 docs/PITFALLS.md「附件图片延迟」），
 		// 那段时间气泡只能空着等——先本地插一条，权威 message_start 到达时原位认领。
@@ -175,12 +192,24 @@ export function useComposerSend(options: UseComposerSendOptions) {
 						.getState()
 						.appendOptimisticUser(sessionId, { text: content, images: sentImages });
 		try {
-			await getPi().prompt({
+			const result = await getPi().prompt({
 				sessionId,
 				text: content,
 				images: sentImages.length > 0 ? sentImages : undefined,
 			});
+			if (trackId) {
+				if (result?.disposition === "handled") {
+					// 扩展命令已就地执行：本轮无 agent_start/agent_settled，乐观置位无人复位，
+					// 必须在这里回到发送前状态；槽置 done 由 CommandTracksBar 短暂展示后自动收起
+					useTranscriptStore.getState().markAgentActive(sessionId, wasActive);
+					useCommandTracksStore.getState().updateTrack(sessionId, trackId, "done");
+				} else {
+					// started/queued/undefined：模板/skill/正常轮次或排队，由轮次事件流接管，槽关闭
+					useCommandTracksStore.getState().removeTrack(sessionId, trackId);
+				}
+			}
 		} catch (err) {
+			if (trackId) useCommandTracksStore.getState().updateTrack(sessionId, trackId, "error");
 			if (optimisticId) useTranscriptStore.getState().removeOptimisticUser(sessionId, optimisticId);
 			useTranscriptStore.getState().markAgentActive(sessionId, wasActive);
 			setError(err instanceof Error ? err.message : String(err));

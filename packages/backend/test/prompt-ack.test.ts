@@ -33,14 +33,14 @@ describe("PiBackend.prompt 受理回执", () => {
 				return runGate; // run 永不结束也不影响返回
 			});
 
-			await expect(backend.prompt("s1", "hi")).resolves.toBeUndefined();
+			await expect(backend.prompt("s1", "hi")).resolves.toEqual({ disposition });
 			releaseRun();
 		},
 	);
 
 	it("无 preflight 直接返回（SDK if (!messages) return 保险路径）也放行", async () => {
 		const backend = makeBackend("s1", async () => {});
-		await expect(backend.prompt("s1", "hi")).resolves.toBeUndefined();
+		await expect(backend.prompt("s1", "hi")).resolves.toEqual({});
 	});
 
 	it("preflight 前抛错：reject 传真实错误（1.0.4 被拒不再回调 preflight）", async () => {
@@ -57,7 +57,7 @@ describe("PiBackend.prompt 受理回执", () => {
 			return Promise.reject(new Error("run failed"));
 		});
 
-		await expect(backend.prompt("s1", "hi")).resolves.toBeUndefined();
+		await expect(backend.prompt("s1", "hi")).resolves.toEqual({ disposition: "started" });
 	});
 
 	it("无会话直接抛错", async () => {

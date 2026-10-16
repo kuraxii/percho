@@ -70,6 +70,11 @@ export interface ChannelDef<C extends string = string, A = void, R = unknown> {
 	ret: R;
 }
 
+/** prompt 受理回执（SDK preflightResult 的 disposition）：扩展命令已就地处理 / 已入队 / 正常开跑 */
+export interface PromptResult {
+	disposition?: "handled" | "queued" | "started";
+}
+
 /** 已知 channel 字面量的 args/ret 构造器（第二段显式泛型） */
 export type ChannelCtor<C extends string> = <A, R>() => ChannelDef<C, A, R>;
 
@@ -104,8 +109,8 @@ export const SESSION_CHANNELS = {
 	>(),
 	/** 删除会话（含磁盘 jsonl 文件，不可恢复） */
 	deleteSession: ch("session:delete")<{ sessionId: string; sessionFile?: string }, void>(),
-	/** 发送消息；images 为随消息附带的图片（base64） */
-	prompt: ch("session:prompt")<{ sessionId: string; text: string; images?: ImageInput[] }, void>(),
+	/** 发送消息；images 为随消息附带的图片（base64）。返回受理回执（执行过程走事件流） */
+	prompt: ch("session:prompt")<{ sessionId: string; text: string; images?: ImageInput[] }, PromptResult>(),
 	/** 仅重试当前末端模型失败，不新增用户消息；受理即返回，执行结果走事件流。 */
 	retryLastFailedTurn: ch("session:retryLastFailedTurn")<
 		{ sessionId: string; ref: { timestamp: number; entryId: string } },

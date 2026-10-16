@@ -46,6 +46,7 @@ import type {
 	PermissionMode,
 	PermissionRequest,
 	PermissionResolved,
+	PromptResult,
 	QuotaInfo,
 	SessionCloseIntent,
 	SessionEvent,
@@ -880,7 +881,7 @@ export class PiBackend {
 		log.info("session deleted", sessionId);
 	}
 
-	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<void> {
+	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptResult> {
 		const entry = this.requireWritable(sessionId);
 		log.info("prompt", sessionId, { text: text.slice(0, 120), images: images?.length ?? 0 });
 		// session.prompt() 非流式路径会 await 整个 run（直到 agent_settled）；渲染端只需要
@@ -890,8 +891,9 @@ export class PiBackend {
 		// ack 之后 run 期错误不再回传（走事件流呈现），then 的 reject 在已 resolve 后为 no-op。
 		// 1.0.4 契约：disposition ∈ "handled" | "queued" | "started"，三者都是「已受理」→ 全部 resolve；
 		// **被拒时 SDK 不再回调**（0.84.3 的 preflightResult(false) 已删），真实错误只经下面的 reject 回传。
-		// 三种 disposition 不往 IPC 传：渲染端的「已排队」区分靠 queue_update 事件，传个无人消费的值只是死契约。
-		await new Promise<void>((resolve, reject) => {
+		// disposition 随回执传回渲染端："handled" 是「扩展命令已就地执行、本轮无模型轮次」的确定信号，
+		// 渲染端据此复位工作中状态并关闭命令跟踪槽（命令零事件，靠回执才不悬挂）。
+		return new Promise<PromptResult>((resolve, reject) => {
 			entry.session
 				.prompt(text, {
 					// 运行中发送走 followUp 排队（agent 完成后自动投递；steer 打断暂不支持）
@@ -903,16 +905,11 @@ export class PiBackend {
 						mimeType: image.mimeType,
 					})),
 					preflightResult: (disposition) => {
-						switch (disposition) {
-							case "handled": // 扩展命令已就地处理，本轮不会再有模型响应
-							case "queued": // steer/followUp 已入队
-							case "started": // 正常开跑
-								resolve();
-						}
+						resolve({ disposition });
 					},
 				})
 				.then(
-					() => resolve(),
+					() => resolve({}), // 兜底回执（preflight 未回调时）；已在 preflight 回调 resolve 过则 no-op
 					(err) => reject(err),
 				);
 		});
