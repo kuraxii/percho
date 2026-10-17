@@ -20,6 +20,7 @@ import { pushToast } from "./toasts";
 export type SettingsCategory =
 	| "general"
 	| "appearance"
+	| "terminal"
 	| "models"
 	| "skills"
 	| "mcp"

@@ -8,6 +8,11 @@ export default defineConfig({
 		plugins: [externalizeDepsPlugin({ exclude: ["@percho/backend", "@percho/shared"] })],
 		build: {
 			rollupOptions: {
+				input: {
+					index: resolve(__dirname, "src/main/index.ts"),
+					// pty 宿主子进程（utilityProcess.fork 的入口）：node-pty 只在这个入口里被引用
+					"pty-host-child": resolve(__dirname, "src/main/terminal/pty-host-child.ts"),
+				},
 				external: ["@earendil-works/pi-coding-agent"],
 			},
 		},

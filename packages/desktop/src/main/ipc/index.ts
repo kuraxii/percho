@@ -1,6 +1,7 @@
 import type { PiBackend } from "@percho/backend";
 import { IpcChannels } from "@percho/shared";
 import type { LanObserverHandle } from "../lan";
+import type { IPtyHost } from "../terminal/pty-service";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
@@ -10,6 +11,7 @@ import { registerPackagesIpc } from "./packages";
 import { forward, sendToRenderer } from "./send";
 import { registerSessionsIpc } from "./sessions";
 import { registerSettingsIpc } from "./settings";
+import { registerTerminalIpc } from "./terminal";
 import { registerUiPluginsIpc } from "./ui-plugins";
 
 /**
@@ -20,6 +22,7 @@ export function registerIpc(
 	backend: PiBackend,
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
+	pty: IPtyHost,
 ): void {
 	registerSessionsIpc(backend);
 	registerSettingsIpc(backend);
@@ -28,6 +31,7 @@ export function registerIpc(
 	registerExtensionDialogIpc(backend);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);
+	registerTerminalIpc(pty);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
 	uiPluginsManager.startWatcher((name) => {
 		sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "changed", name });

@@ -161,6 +161,22 @@ export function createWindow(theme: "dark" | "light" = "light", bounds: Rect | n
 		quitGuard = false;
 	});
 
+	// 内建终端快捷键：Ctrl+` 全局切换（窗口级，非系统级）。
+	// 用 before-input-event 而非 renderer keydown：拦截先于页面事件，可 preventDefault 防
+	// 输入框（composer）吃到反引号；窗口聚焦才生效，不占用系统全局快捷键（globalShortcut）。
+	window.webContents.on("before-input-event", (event, input) => {
+		if (
+			input.type === "keyDown" &&
+			input.control &&
+			!input.alt &&
+			!input.meta &&
+			input.code === "Backquote"
+		) {
+			event.preventDefault();
+			window.webContents.send(IpcChannels.TerminalToggle);
+		}
+	});
+
 	// 关窗语义按平台：
 	// - macOS：红点/⌘W = 收起窗口（应用继续跑，Dock/菜单栏可恢复）
 	// - Windows：✕ 就是退出（微软惯例），保留；只在渲染端接管了确认弹窗时拦一手，

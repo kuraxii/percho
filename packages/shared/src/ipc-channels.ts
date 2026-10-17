@@ -210,6 +210,52 @@ export const LAN_CHANNELS = {
 	lanSetRemoteControl: ch("lan:setRemoteControl")<{ enabled: boolean }, LanStatus>(),
 } as const;
 
+/** 终端 spawn 参数（缺省由 main 侧默认：shell=$SHELL、cwd=当前会话 cwd、80x24） */
+export interface TerminalSpawnOptions {
+	cwd?: string;
+	shell?: string;
+	cols?: number;
+	rows?: number;
+}
+
+/** 终端实例句柄（renderer 以此路由后续操作）；shell 为实际启动的 shell 路径（renderer 用作默认 tab 标题） */
+export interface TerminalHandle {
+	id: number;
+	pid: number;
+	shell: string;
+}
+
+/** 终端写输入参数 */
+export interface TerminalWriteArgs {
+	id: number;
+	data: string;
+}
+
+/** 终端 resize 参数 */
+export interface TerminalResizeArgs {
+	id: number;
+	cols: number;
+	rows: number;
+}
+
+/** 终端 close 参数 */
+export interface TerminalCloseArgs {
+	id: number;
+}
+
+/** pty → renderer 输出（main 侧 5ms 聚合后批量推送） */
+export interface TerminalDataEvent {
+	id: number;
+	data: string;
+}
+
+/** pty 退出事件 */
+export interface TerminalExitEvent {
+	id: number;
+	exitCode: number;
+	signal?: number;
+}
+
 /** 扩展对话框域：renderer 应答（请求/结算/通知为 main→renderer 单向事件，在 index.ts 转发） */
 export const EXTENSION_DIALOG_CHANNELS = {
 	/** 应答扩展对话框（宿主按 requestId 归属路由，未知 id 静默忽略） */
@@ -360,6 +406,18 @@ export const UI_PLUGINS_CHANNELS = {
 } as const;
 
 /** 已表化通道全集（分批迁移，终态 = 全部 invoke 通道） */
+/** 内建终端域：node-pty 伪终端（spawn/write/resize/close；pty→renderer 数据/退出为单向事件） */
+export const TERMINAL_CHANNELS = {
+	/** 新建终端实例（shell 默认 $SHELL，cwd 默认当前会话 cwd） */
+	spawnTerminal: ch("terminal:spawn")<{ options?: TerminalSpawnOptions }, TerminalHandle>(),
+	/** 写入输入（renderer → pty） */
+	writeTerminal: ch("terminal:write")<TerminalWriteArgs, void>(),
+	/** 同步尺寸（xterm fit 后调用） */
+	resizeTerminal: ch("terminal:resize")<TerminalResizeArgs, void>(),
+	/** 关闭终端实例（不 kill 内部 shell 的清理由 main 侧 onExit 兜底） */
+	closeTerminal: ch("terminal:close")<TerminalCloseArgs, void>(),
+} as const;
+
 export const CHANNEL_TABLE = {
 	...SESSION_CHANNELS,
 	...SETTINGS_CHANNELS,
@@ -367,6 +425,7 @@ export const CHANNEL_TABLE = {
 	...MCP_CHANNELS,
 	...APP_CHANNELS,
 	...LAN_CHANNELS,
+	...TERMINAL_CHANNELS,
 	...EXTENSION_DIALOG_CHANNELS,
 	...UI_PLUGINS_CHANNELS,
 } as const;
@@ -414,6 +473,9 @@ function subscription<P>() {
 /** Sole subscription definition: API key + explicit legacy alias + channel + payload type. */
 export const SUBSCRIPTION_TABLE = {
 	onProviderLoginEvent: subscription<LoginEventPayload>()("SettingsLoginEvent", "settings:loginEvent"),
+	onTerminalData: subscription<TerminalDataEvent>()("TerminalData", "terminal:data"),
+	onTerminalExit: subscription<TerminalExitEvent>()("TerminalExit", "terminal:exit"),
+	onTerminalToggle: subscription<void>()("TerminalToggle", "terminal:toggle", true),
 	onMcpServersChanged: subscription<McpServersChangedPayload>()("McpServersChanged", "mcp:serversChanged"),
 	onChannelSubscriptionsChanged: subscription<ChannelSubscriptionsSnapshot>()(
 		"ChannelSubscriptionsChanged",

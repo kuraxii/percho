@@ -69,7 +69,36 @@ export interface UiState {
 	 * 缺省/脏值回 `SIDEBAR_DEFAULT_WIDTH`；读回时按同一组上下界 clamp（main `ui-state.ts` 的 normalize）。
 	 * 它**不是**实际渲染宽：窗口太窄时渲染宽还要被「容器宽 - 聊天列最小宽」夹紧，那是 renderer 的渲染期派生值（`lib/sidebar-width.ts`），不回写这里。
 	 */
+	/**
+	 * 左侧栏宽度（px）= **用户意图值**，取值域 `[SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH]`（`src/sidebar.ts`）。
+	 * 缺省/脏值回 `SIDEBAR_DEFAULT_WIDTH`；读回时按同一组上下界 clamp（main `ui-state.ts` 的 normalize）。
+	 * 它**不是**实际渲染宽：窗口太窄时渲染宽还要被「容器宽 - 聊天列最小宽」夹紧，那是 renderer 的渲染期派生值（`lib/sidebar-width.ts`），不回写这里。
+	 */
 	sidebarWidth: number;
+	/**
+	 * 内建终端面板高度（px）= **用户意图值**，取值域 `[TERMINAL_MIN_HEIGHT, TERMINAL_MAX_HEIGHT]`（`src/terminal.ts`）。
+	 * 缺省/脏值回 `TERMINAL_DEFAULT_HEIGHT`；读回时按同一组上下界 clamp（main `ui-state.ts` 的 normalize）。
+	 * 拖拽中只更新内存态，pointerup 才落盘（与 sidebarWidth 同模式）。
+	 */
+	terminalHeight: number;
+	/** 终端字体族（设置 → 终端；缺省/空串回 TERMINAL_FONT_FAMILY_DEFAULT） */
+	terminalFontFamily: string;
+	/** 终端字号 px（设置 → 终端；对齐 vscode 默认 14，夹紧 [6,100]） */
+	terminalFontSize: number;
+	/** 终端行高乘数（对齐 vscode Linux 默认 1.1，夹紧 [0.8,2]） */
+	terminalLineHeight: number;
+	/** 终端光标闪烁（对齐 vscode 默认开） */
+	terminalCursorBlinking: boolean;
+	/** 终端光标样式（block/line/bar，对齐 vscode 默认 block） */
+	terminalCursorStyle: "block" | "line" | "bar";
+	/** 终端滚动回退行数（用户指定默认 2000，vscode 默认 1000） */
+	terminalScrollback: number;
+	/** 终端 WebGL 渲染（auto/on/off，对齐 vscode gpuAcceleration 默认 auto） */
+	terminalGpuAcceleration: "auto" | "on" | "off";
+	/** 终端标题模式：auto = shell 名起步 + OSC 协议更新（现状）；shell = 固定 shell 名；cwd = 固定启动 cwd 名 */
+	terminalTitleMode: "auto" | "shell" | "cwd";
+	/** 终端选中即复制（对齐 vscode copyOnSelection 默认关） */
+	terminalCopyOnSelection: boolean;
 	/**
 	 * 界面字号（px）：基准 13（= 迁移前现状，乘数 1），四档 12 / 13 / 15 / 17（shared/typography.ts）。
 	 * 影响全部界面文字（含对话正文），图标与布局尺寸不受影响。

@@ -13,6 +13,7 @@ export * from "./settings";
 export * from "./sidebar";
 export * from "./skill-invocation";
 export * from "./subagent";
+export * from "./terminal";
 export * from "./thinking";
 export * from "./todo";
 export * from "./transcript";

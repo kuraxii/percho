@@ -322,19 +322,102 @@ export function PanelLeftIcon({ size = 15, className }: IconProps) {
 	);
 }
 
-/** 加号 */
-export function PlusIcon({ size = 14, className }: IconProps) {
+/** 最大化（codicon chrome-maximize，MIT vscode-codicons） */
+export function MaximizeIcon({ size = 13, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path d="M2 4.5C2 3.11929 3.11929 2 4.5 2H11.5C12.8807 2 14 3.11929 14 4.5V11.5C14 12.8807 12.8807 14 11.5 14H4.5C3.11929 14 2 12.8807 2 11.5V4.5ZM4.5 3C3.67157 3 3 3.67157 3 4.5V11.5C3 12.3284 3.67157 13 4.5 13H11.5C12.3284 13 13 12.3284 13 11.5V4.5C13 3.67157 12.3284 3 11.5 3H4.5Z" />
+		</svg>
+	);
+}
+
+/** 还原（codicon chrome-restore，MIT vscode-codicons） */
+export function RestoreIcon({ size = 13, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path d="M5.08496 4C5.29088 3.4174 5.8465 3 6.49961 3H9.99961C11.6565 3 12.9996 4.34315 12.9996 6V9.5C12.9996 10.1531 12.5822 10.7087 11.9996 10.9146V6C11.9996 4.89543 11.1042 4 9.99961 4H5.08496ZM4.5 5H9.5C10.3284 5 11 5.67157 11 6.5V11.5C11 12.3284 10.3284 13 9.5 13H4.5C3.67157 13 3 12.3284 3 11.5V6.5C3 5.67157 3.67157 5 4.5 5ZM4.5 6C4.22386 6 4 6.22386 4 6.5V11.5C4 11.7761 4.22386 12 4.5 12H9.5C9.77614 12 10 11.7761 10 11.5V6.5C10 6.22386 9.77614 6 9.5 6H4.5Z" />
+		</svg>
+	);
+}
+
+/** 终端（codicon terminal，MIT vscode-codicons；官方 24x24 path） */
+export function TerminalIcon({ size = 16, className }: IconProps) {
 	return (
 		<svg
 			className={className}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
-			{...strokeProps}
-			strokeWidth={1.5}
+			fill="currentColor"
 			aria-hidden="true"
 		>
-			<path d="M12 5v14M5 12h14" strokeLinecap="round" />
+			<path d="M18.75 1.5H5.25C3.1815 1.5 1.5 3.183 1.5 5.25V18.75C1.5 20.8185 3.1815 22.5 5.25 22.5H18.75C20.8185 22.5 22.5 20.8185 22.5 18.75V5.25C22.5 3.183 20.8185 1.5 18.75 1.5ZM21 18.75C21 19.9905 19.9905 21 18.75 21H5.25C4.0095 21 3 19.9905 3 18.75V5.25C3 4.0095 4.0095 3 5.25 3H18.75C19.9905 3 21 4.0095 21 5.25V18.75ZM10.281 13.281L5.781 17.781C5.634 17.928 5.442 18 5.25 18C5.058 18 4.866 17.9265 4.719 17.781C4.4265 17.4885 4.4265 17.013 4.719 16.7205L8.688 12.7515L4.719 8.7825C4.4265 8.49 4.4265 8.0145 4.719 7.722C5.0115 7.4295 5.487 7.4295 5.7795 7.722L10.2795 12.222C10.572 12.5145 10.572 12.99 10.2795 13.2825L10.281 13.281ZM19.5 17.25C19.5 17.664 19.164 18 18.75 18H11.25C10.836 18 10.5 17.664 10.5 17.25C10.5 16.836 10.836 16.5 11.25 16.5H18.75C19.164 16.5 19.5 16.836 19.5 17.25Z" />
+		</svg>
+	);
+}
+
+/** 加号（codicon add，MIT vscode-codicons） */
+export function PlusIcon({ size = 14, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path d="M8 1.5C8 1.22386 7.77614 1 7.5 1C7.22386 1 7 1.22386 7 1.5V7H1.5C1.22386 7 1 7.22386 1 7.5C1 7.77614 1.22386 8 1.5 8H7V13.5C7 13.7761 7.22386 14 7.5 14C7.77614 14 8 13.7761 8 13.5V8H13.5C13.7761 8 14 7.77614 14 7.5C14 7.22386 13.7761 7 13.5 7H8V1.5Z" />
+		</svg>
+	);
+}
+
+/** 分屏（codicon split-horizontal，MIT vscode-codicons） */
+export function SplitIcon({ size = 13, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path d="M12.5 1H3.5C2.122 1 1 2.122 1 3.5V12.5C1 13.878 2.122 15 3.5 15H12.5C13.878 15 15 13.878 15 12.5V3.5C15 2.122 13.878 1 12.5 1ZM2 12.5V3.5C2 2.673 2.673 2 3.5 2H7.5V14H3.5C2.673 14 2 13.327 2 12.5ZM14 12.5C14 13.327 13.327 14 12.5 14H8.5V2H12.5C13.327 2 14 2.673 14 3.5V12.5Z" />
+		</svg>
+	);
+}
+
+/** 清屏（codicon clear-all，MIT vscode-codicons） */
+export function ClearIcon({ size = 13, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path d="M13.5004 12.0004C13.7762 12.0006 14.0004 12.2245 14.0004 12.5004C14.0002 12.7761 13.7761 13.0002 13.5004 13.0004H2.50037C2.22449 13.0004 2.00056 12.7762 2.00037 12.5004C2.00037 12.2244 2.22437 12.0004 2.50037 12.0004H13.5004Z" />
+			<path d="M13.5004 9.00037C13.7762 9.00056 14.0004 9.22449 14.0004 9.50037C14.0002 9.77608 13.7761 10.0002 13.5004 10.0004H2.50037C2.22449 10.0004 2.00056 9.7762 2.00037 9.50037C2.00037 9.22437 2.22437 9.00037 2.50037 9.00037H13.5004Z" />
+			<path d="M13.5004 6.00037C13.7762 6.00056 14.0004 6.22449 14.0004 6.50037C14.0002 6.77608 13.7761 7.00017 13.5004 7.00037H7.50037C7.22449 7.00037 7.00056 6.7762 7.00037 6.50037C7.00037 6.22437 7.22437 6.00037 7.50037 6.00037H13.5004Z" />
+			<path d="M5.50037 0.999023C5.63295 0.999115 5.76009 1.05179 5.85388 1.14551C5.94777 1.23939 6.00037 1.36722 6.00037 1.5C6.00027 1.63265 5.94769 1.75971 5.85388 1.85352L3.7074 4L5.85388 6.14551C5.94777 6.23939 6.00037 6.36722 6.00037 6.5C6.00027 6.63265 5.94769 6.75971 5.85388 6.85352C5.76008 6.94732 5.63302 6.99991 5.50037 7C5.36759 7 5.23976 6.9474 5.14587 6.85352L3.00037 4.70703L0.853882 6.85352C0.760077 6.94732 0.633017 6.99991 0.500366 7C0.36759 7 0.239761 6.9474 0.145874 6.85352C0.0521583 6.75972 -0.000519052 6.63258 -0.000610352 6.5C-0.000610354 6.36722 0.0519875 6.23939 0.145874 6.14551L2.29333 4L0.145874 1.85352C0.0521583 1.75972 -0.000519119 1.63258 -0.000610352 1.5C-0.000610351 1.36722 0.0519874 1.23939 0.145874 1.14551C0.239761 1.05162 0.36759 0.999023 0.500366 0.999023C0.63295 0.999115 0.76009 1.05179 0.853882 1.14551L3.00037 3.29297L5.14587 1.14551C5.23976 1.05162 5.36759 0.999023 5.50037 0.999023Z" />
+			<path d="M13.5004 3.00037C13.7762 3.00056 14.0004 3.22449 14.0004 3.50037C14.0002 3.77608 13.7761 4.00017 13.5004 4.00037H7.50037C7.22449 4.00037 7.00056 3.7762 7.00037 3.50037C7.00037 3.22437 7.22437 3.00037 7.50037 3.00037H13.5004Z" />
 		</svg>
 	);
 }
@@ -478,17 +561,18 @@ export function StopIcon({ size = 10, className }: IconProps) {
 	);
 }
 
-/** 下拉箭头 */
+/** 下拉箭头（codicon chevron-down，MIT vscode-codicons） */
 export function ChevronDownIcon({ size = 10, className }: IconProps) {
 	return (
-		<svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-			<path
-				d="m6 9 6 6 6-6"
-				stroke="currentColor"
-				strokeWidth="2.5"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path d="M3.14598 5.85423L7.64598 10.3542C7.84098 10.5492 8.15798 10.5492 8.35298 10.3542L12.853 5.85423C13.048 5.65923 13.048 5.34223 12.853 5.14723C12.658 4.95223 12.341 4.95223 12.146 5.14723L7.99998 9.29323L3.85398 5.14723C3.65898 4.95223 3.34198 4.95223 3.14698 5.14723C2.95198 5.34223 2.95098 5.65923 3.14598 5.85423Z" />
 		</svg>
 	);
 }
@@ -549,19 +633,18 @@ export function TodoCompleteIcon({ size = 14, className }: IconProps) {
 	);
 }
 
-/** todo 进行中：弧线转圈（animate-spin 由使用方控制，颜色淡雅灰系） */
+/** todo 进行中：codicon loading 弧线（animate-spin 由使用方控制） */
 export function TodoSpinnerIcon({ size = 14, className }: IconProps) {
 	return (
-		<svg className={className} width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-			<circle
-				cx="8"
-				cy="8"
-				r="6"
-				stroke="currentColor"
-				strokeWidth="1.8"
-				strokeDasharray="26 12"
-				strokeLinecap="round"
-			/>
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path d="M13.5 8.5C13.224 8.5 13 8.276 13 8C13 5.243 10.757 3 8 3C5.243 3 3 5.243 3 8C3 8.276 2.776 8.5 2.5 8.5C2.224 8.5 2 8.276 2 8C2 4.691 4.691 2 8 2C11.309 2 14 4.691 14 8C14 8.276 13.776 8.5 13.5 8.5Z" />
 		</svg>
 	);
 }
@@ -618,23 +701,18 @@ export function RefreshIcon({ size = 13, className }: IconProps) {
 	);
 }
 
-/** 垃圾桶（删除/移除凭证） */
+/** 垃圾桶（codicon trash，MIT vscode-codicons） */
 export function TrashIcon({ size = 13, className }: IconProps) {
 	return (
 		<svg
 			className={className}
 			width={size}
 			height={size}
-			viewBox="0 0 24 24"
-			{...strokeProps}
-			strokeLinecap="round"
-			strokeLinejoin="round"
+			viewBox="0 0 16 16"
+			fill="currentColor"
 			aria-hidden="true"
 		>
-			<path d="M3 6h18" />
-			<path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
-			<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-			<path d="M10 11v6M14 11v6" />
+			<path d="M14 2H10C10 0.897 9.103 0 8 0C6.897 0 6 0.897 6 2H2C1.724 2 1.5 2.224 1.5 2.5C1.5 2.776 1.724 3 2 3H2.54L3.349 12.708C3.456 13.994 4.55 15 5.84 15H10.159C11.449 15 12.543 13.993 12.65 12.708L13.459 3H13.999C14.275 3 14.499 2.776 14.499 2.5C14.499 2.224 14.275 2 13.999 2H14ZM8 1C8.551 1 9 1.449 9 2H7C7 1.449 7.449 1 8 1ZM11.655 12.625C11.591 13.396 10.934 14 10.16 14H5.841C5.067 14 4.41 13.396 4.346 12.625L3.544 3H12.458L11.656 12.625H11.655ZM7 5.5V11.5C7 11.776 6.776 12 6.5 12C6.224 12 6 11.776 6 11.5V5.5C6 5.224 6.224 5 6.5 5C6.776 5 7 5.224 7 5.5ZM10 5.5V11.5C10 11.776 9.776 12 9.5 12C9.224 12 9 11.776 9 11.5V5.5C9 5.224 9.224 5 9.5 5C9.776 5 10 5.224 10 5.5Z" />
 		</svg>
 	);
 }

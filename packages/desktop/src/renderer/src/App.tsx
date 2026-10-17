@@ -14,6 +14,7 @@ import { TrustDialog } from "./components/session/TrustDialog";
 import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { Toaster } from "./components/Toaster";
+import { TerminalDock } from "./components/terminal/TerminalDock";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
 import { initDailyDir } from "./lib/daily";
 import { useSessionGc } from "./lib/use-session-gc";
@@ -31,6 +32,7 @@ import {
 import { restoreSessionWorkspace } from "./stores/session-workspace-restore";
 import { useSessionsStore } from "./stores/sessions";
 import { useHasParentRelation } from "./stores/subagent-return";
+import { useTerminalStore } from "./stores/terminal";
 import { backgroundImageUrl, useThemeStore } from "./stores/theme";
 import { useTranscriptStore } from "./stores/transcript";
 import { useUiPreferencesStore } from "./stores/ui-preferences";
@@ -45,6 +47,8 @@ import { initUpdateStore } from "./stores/update";
 
 export default function App() {
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
+	// 内建终端面板开合（Ctrl+` 事件 + 关闭按钮共用；selector 收敛为原始值防级联渲染）
+	const terminalOpen = useTerminalStore((s) => s.open);
 	// 子代理检视页才挂返回入口：无关系时连左上定位容器都不出现（不留占位）
 	const hasParentRelation = useHasParentRelation(activeSessionId);
 	/** Todo 槽位的 `display: contents` 宿主：CornerStack 靠它测量渲染根底边（插件原绝对定位不受影响） */
@@ -70,6 +74,11 @@ export default function App() {
 		setTrustRequests((prev) => [...prev, req]);
 	}, []);
 	useSessionEventBridge({ onTrustRequest: pushTrustRequest });
+
+	// 内建终端：Ctrl+`（main 进程 before-input-event 拦截）→ TerminalToggle 事件翻转面板
+	useEffect(() => {
+		return getPi().onTerminalToggle(() => useTerminalStore.getState().toggle());
+	}, []);
 
 	// 一次性 bootstrap：开屏就绪信号 + 更新状态 + UI 插件加载
 	// 会话内存策略（K=3 热会话 + 受保护不卸）：全局挂一次，策略细节在 lib/session-gc.ts
@@ -151,6 +160,7 @@ export default function App() {
 							<RegionHost region={UI_REGIONS.CornerBottomRight} />
 						</main>
 						<DockSlot sessionId={activeSessionId} hideComposer={showEmpty} />
+						{terminalOpen && <TerminalDock />}
 					</div>
 					<DiffSidebar />
 				</div>

@@ -2,9 +2,31 @@ import {
 	CODE_FONT_SIZE_BASE,
 	clampCodeFontSize,
 	clampSidebarWidth,
+	clampTerminalFontSize,
+	clampTerminalHeight,
+	clampTerminalLineHeight,
+	clampTerminalScrollback,
 	clampUiFontSize,
 	type PermissionMode,
 	SIDEBAR_DEFAULT_WIDTH,
+	sanitizeTerminalCopyOnSelection,
+	sanitizeTerminalCursorStyle,
+	sanitizeTerminalFontFamily,
+	sanitizeTerminalGpuAcceleration,
+	sanitizeTerminalTitleMode,
+	TERMINAL_COPY_ON_SELECTION_DEFAULT,
+	TERMINAL_CURSOR_BLINKING_DEFAULT,
+	TERMINAL_CURSOR_STYLE_DEFAULT,
+	TERMINAL_DEFAULT_HEIGHT,
+	TERMINAL_FONT_FAMILY_DEFAULT,
+	TERMINAL_FONT_SIZE_DEFAULT,
+	TERMINAL_GPU_ACCELERATION_DEFAULT,
+	TERMINAL_LINE_HEIGHT_DEFAULT,
+	TERMINAL_SCROLLBACK_DEFAULT,
+	TERMINAL_TITLE_MODE_DEFAULT,
+	type TerminalCursorStyle,
+	type TerminalGpuAcceleration,
+	type TerminalTitleMode,
 	UI_FONT_SIZE_BASE,
 	type UiState,
 } from "@percho/shared";
@@ -12,6 +34,7 @@ import { create } from "zustand";
 import { getPi } from "../api";
 import { toggleInList } from "../lib/toggle-in-list";
 import { applyFontScales } from "../lib/typography";
+import { useTerminalStore } from "./terminal";
 
 /** 应用级 UI 偏好（持久化在 ui-state.json，与主题/背景同源；主进程 normalize 负责旧文件缺省） */
 interface UiPreferencesStore {
@@ -33,6 +56,26 @@ interface UiPreferencesStore {
 	 * 它不是渲染宽：渲染宽 = 它再被「容器宽 - 聊天列最小宽」夹紧（`lib/sidebar-width.ts`），不回写这里。
 	 */
 	sidebarWidth: number;
+	/** 内建终端面板高度（px）= **用户意图值**（拖拽的落点，越界已在写入时 clamp；terminal store 渲染期同步） */
+	terminalHeight: number;
+	/** 终端字体族（设置 → 终端；新终端生效） */
+	terminalFontFamily: string;
+	/** 终端字号 px（设置 → 终端；已开终端即时热更新） */
+	terminalFontSize: number;
+	/** 终端行高乘数（已开终端即时热更新） */
+	terminalLineHeight: number;
+	/** 终端光标闪烁（已开终端即时热更新） */
+	terminalCursorBlinking: boolean;
+	/** 终端光标样式（已开终端即时热更新） */
+	terminalCursorStyle: TerminalCursorStyle;
+	/** 终端滚动回退行数（仅新终端生效：xterm 不重建已有 buffer） */
+	terminalScrollback: number;
+	/** 终端 WebGL 渲染（仅新终端生效） */
+	terminalGpuAcceleration: TerminalGpuAcceleration;
+	/** 终端标题模式（仅新终端生效） */
+	terminalTitleMode: TerminalTitleMode;
+	/** 终端选中即复制（仅新终端生效） */
+	terminalCopyOnSelection: boolean;
 	/** 左侧栏已展开的分组 key；含义由 `expandedGroupsTouched` 决定（见 shared UiState，空数组不再兼任「未操作」） */
 	expandedGroups: string[];
 	/** 展开态是否已被用户手动开合过（false = 走 Sidebar 的默认推断，true = 空数组合法表示全部折叠） */
@@ -65,6 +108,10 @@ interface UiPreferencesStore {
 	previewSidebarWidth: (width: number) => void;
 	/** 把当前 `sidebarWidth` 落盘一次（拖拽收尾调；幂等，未拖动时调也没坏处） */
 	commitSidebarWidth: () => void;
+	/** 终端面板高度拖拽预览（与 previewSidebarWidth 同模式：只改内存，不落盘） */
+	previewTerminalHeight: (px: number) => void;
+	/** 把当前 `terminalHeight` 落盘一次（拖拽收尾调） */
+	commitTerminalHeight: () => void;
 	/** 左侧栏开合一个分组（由 useExpandedGroups 算好新的展开集）：**同时置 touched 位**，
 	 *  空数组合法表示「用户把最后一组也折了」（旧版空数组只能表示「没操作过」） */
 	setExpandedGroups: (groups: string[]) => void;
@@ -85,6 +132,16 @@ interface UiPreferencesStore {
 	setUiFontSize: (px: number) => void;
 	/** 切换代码字号：写 `--fs-code-scale`（内联 code / 代码块 / diff / mermaid）+ monaco 由 Markdown.tsx 传 options */
 	setCodeFontSize: (px: number) => void;
+	/** 终端设置 setter：set + 落盘（设置面板直接调；校验在 shared 函数里收口） */
+	setTerminalFontFamily: (value: string) => void;
+	setTerminalFontSize: (px: number) => void;
+	setTerminalLineHeight: (value: number) => void;
+	setTerminalCursorBlinking: (enabled: boolean) => void;
+	setTerminalCursorStyle: (style: TerminalCursorStyle) => void;
+	setTerminalScrollback: (lines: number) => void;
+	setTerminalGpuAcceleration: (mode: TerminalGpuAcceleration) => void;
+	setTerminalTitleMode: (mode: TerminalTitleMode) => void;
+	setTerminalCopyOnSelection: (enabled: boolean) => void;
 }
 
 /** 持久化补丁（失败只记日志：偏好丢失不影响使用，弹 toast 反而更吵） */
@@ -110,6 +167,16 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 	lastCwd: null,
 	uiFontSize: UI_FONT_SIZE_BASE,
 	codeFontSize: CODE_FONT_SIZE_BASE,
+	terminalHeight: TERMINAL_DEFAULT_HEIGHT,
+	terminalFontFamily: TERMINAL_FONT_FAMILY_DEFAULT,
+	terminalFontSize: TERMINAL_FONT_SIZE_DEFAULT,
+	terminalLineHeight: TERMINAL_LINE_HEIGHT_DEFAULT,
+	terminalCursorBlinking: TERMINAL_CURSOR_BLINKING_DEFAULT,
+	terminalCursorStyle: TERMINAL_CURSOR_STYLE_DEFAULT,
+	terminalScrollback: TERMINAL_SCROLLBACK_DEFAULT,
+	terminalGpuAcceleration: TERMINAL_GPU_ACCELERATION_DEFAULT,
+	terminalTitleMode: TERMINAL_TITLE_MODE_DEFAULT,
+	terminalCopyOnSelection: TERMINAL_COPY_ON_SELECTION_DEFAULT,
 
 	init: async () => {
 		const saved = await getPi()
@@ -125,6 +192,19 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 			sessionRailEnabled: saved?.sessionRailEnabled ?? false,
 			sidebarCollapsed: saved?.sidebarCollapsed ?? false,
 			sidebarWidth: clampSidebarWidth(saved?.sidebarWidth),
+			terminalHeight: clampTerminalHeight(saved?.terminalHeight),
+			terminalFontFamily: sanitizeTerminalFontFamily(saved?.terminalFontFamily),
+			terminalFontSize: clampTerminalFontSize(saved?.terminalFontSize),
+			terminalLineHeight: clampTerminalLineHeight(saved?.terminalLineHeight),
+			terminalCursorBlinking:
+				typeof saved?.terminalCursorBlinking === "boolean"
+					? saved.terminalCursorBlinking
+					: TERMINAL_CURSOR_BLINKING_DEFAULT,
+			terminalCursorStyle: sanitizeTerminalCursorStyle(saved?.terminalCursorStyle),
+			terminalScrollback: clampTerminalScrollback(saved?.terminalScrollback),
+			terminalGpuAcceleration: sanitizeTerminalGpuAcceleration(saved?.terminalGpuAcceleration),
+			terminalTitleMode: sanitizeTerminalTitleMode(saved?.terminalTitleMode),
+			terminalCopyOnSelection: sanitizeTerminalCopyOnSelection(saved?.terminalCopyOnSelection),
 			expandedGroups: saved?.expandedGroups ?? [],
 			expandedGroupsTouched: saved?.expandedGroupsTouched ?? false,
 			pinnedProjects: saved?.pinnedProjects ?? [],
@@ -173,6 +253,64 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 		persistPatch({ codeFontSize: next });
 	},
 
+	setTerminalFontFamily: (value) => {
+		const next = sanitizeTerminalFontFamily(value);
+		if (next === get().terminalFontFamily) return;
+		set({ terminalFontFamily: next });
+		persistPatch({ terminalFontFamily: next });
+	},
+
+	setTerminalFontSize: (px) => {
+		const next = clampTerminalFontSize(px);
+		if (next === get().terminalFontSize) return;
+		set({ terminalFontSize: next });
+		persistPatch({ terminalFontSize: next });
+	},
+
+	setTerminalLineHeight: (value) => {
+		const next = clampTerminalLineHeight(value);
+		if (next === get().terminalLineHeight) return;
+		set({ terminalLineHeight: next });
+		persistPatch({ terminalLineHeight: next });
+	},
+
+	setTerminalCursorBlinking: (enabled) => {
+		if (enabled === get().terminalCursorBlinking) return;
+		set({ terminalCursorBlinking: enabled });
+		persistPatch({ terminalCursorBlinking: enabled });
+	},
+
+	setTerminalCursorStyle: (style) => {
+		if (style === get().terminalCursorStyle) return;
+		set({ terminalCursorStyle: style });
+		persistPatch({ terminalCursorStyle: style });
+	},
+
+	setTerminalScrollback: (lines) => {
+		const next = clampTerminalScrollback(lines);
+		if (next === get().terminalScrollback) return;
+		set({ terminalScrollback: next });
+		persistPatch({ terminalScrollback: next });
+	},
+
+	setTerminalGpuAcceleration: (mode) => {
+		if (mode === get().terminalGpuAcceleration) return;
+		set({ terminalGpuAcceleration: mode });
+		persistPatch({ terminalGpuAcceleration: mode });
+	},
+
+	setTerminalTitleMode: (mode) => {
+		if (mode === get().terminalTitleMode) return;
+		set({ terminalTitleMode: mode });
+		persistPatch({ terminalTitleMode: mode });
+	},
+
+	setTerminalCopyOnSelection: (enabled) => {
+		if (enabled === get().terminalCopyOnSelection) return;
+		set({ terminalCopyOnSelection: enabled });
+		persistPatch({ terminalCopyOnSelection: enabled });
+	},
+
 	toggleSidebarCollapsed: () => {
 		const collapsed = !get().sidebarCollapsed;
 		set({ sidebarCollapsed: collapsed });
@@ -188,6 +326,17 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 
 	commitSidebarWidth: () => {
 		persistPatch({ sidebarWidth: get().sidebarWidth });
+	},
+
+	previewTerminalHeight: (px) => {
+		const next = clampTerminalHeight(px);
+		if (next === get().terminalHeight) return;
+		set({ terminalHeight: next });
+		useTerminalStore.getState().setHeight(next);
+	},
+
+	commitTerminalHeight: () => {
+		persistPatch({ terminalHeight: get().terminalHeight });
 	},
 
 	setExpandedGroups: (groups) => {

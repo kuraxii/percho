@@ -9,6 +9,7 @@ import { backgroundsDir } from "./background";
 import { registerIpc } from "./ipc";
 import { initLanObserver, type LanObserverHandle } from "./lan";
 import { attachRendererWatchdog } from "./renderer-watchdog";
+import { PtyService } from "./terminal/pty-service";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
 import { loadUiState } from "./ui-state";
 import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
@@ -19,6 +20,7 @@ const log = createLogger("main");
 let backend: PiBackend;
 let uiPluginsManager: UiPluginManager;
 let lanObserver: LanObserverHandle | undefined;
+let ptyService: PtyService | undefined;
 
 /**
  * 追加进每次会话系统提示词的桌面端段落（每次调用都付费，保持精简）。
@@ -77,7 +79,8 @@ app.whenReady().then(async () => {
 	);
 	uiPluginsManager = new UiPluginManager();
 	await uiPluginsManager.init();
-	registerIpc(backend, uiPluginsManager, lanObserver);
+	ptyService = new PtyService();
+	registerIpc(backend, uiPluginsManager, lanObserver, ptyService);
 	await initUpdater();
 	scheduleAutoUpdateCheck();
 	const uiState = await loadUiState();
@@ -114,4 +117,5 @@ app.on("before-quit", () => {
 	void lanObserver?.stop();
 	backend?.dispose();
 	uiPluginsManager?.disposeWatcher();
+	ptyService?.dispose();
 });

@@ -218,6 +218,21 @@
 	}
 }
 
+/* 终端面板：从底部滑入展开（vscode 式，高度撑开由布局自动让位，输入框被推到上方） */
+.terminal-slide-up {
+	animation: terminal-slide-up 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes terminal-slide-up {
+	from {
+		transform: translateY(28px);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
 /* 扩展 notify 溢出折叠条（Toaster）：比 toast 矮一档，无 glyph，近乎一行注脚（画板⑨） */
 .toast-overflow {
 	background: var(--color-surface);

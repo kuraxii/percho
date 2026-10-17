@@ -3,7 +3,16 @@ import { createLogger, JsonStore } from "@percho/backend";
 import {
 	clampCodeFontSize,
 	clampSidebarWidth,
+	clampTerminalFontSize,
+	clampTerminalHeight,
+	clampTerminalLineHeight,
+	clampTerminalScrollback,
 	clampUiFontSize,
+	sanitizeTerminalCopyOnSelection,
+	sanitizeTerminalCursorStyle,
+	sanitizeTerminalFontFamily,
+	sanitizeTerminalGpuAcceleration,
+	sanitizeTerminalTitleMode,
 	type PermissionMode,
 	type Rect,
 	type SessionWorkspaceSnapshot,
@@ -138,6 +147,18 @@ function normalize(parsed: UiStateFileShape): UiState {
 		sidebarCollapsed: typeof parsed.sidebarCollapsed === "boolean" ? parsed.sidebarCollapsed : false,
 		// 侧栏宽度：脏值/越界一律归一化（手改文件、未来改上下界都在这里归一；renderer 只做渲染期夹紧、不回写）
 		sidebarWidth: clampSidebarWidth(parsed.sidebarWidth),
+		terminalHeight: clampTerminalHeight(parsed.terminalHeight),
+		// 终端设置（设置 → 终端面板）：脏值/缺字段一律回落默认（见 src/terminal.ts 的校验函数）
+		terminalFontFamily: sanitizeTerminalFontFamily(parsed.terminalFontFamily),
+		terminalFontSize: clampTerminalFontSize(parsed.terminalFontSize),
+		terminalLineHeight: clampTerminalLineHeight(parsed.terminalLineHeight),
+		terminalCursorBlinking:
+			typeof parsed.terminalCursorBlinking === "boolean" ? parsed.terminalCursorBlinking : true,
+		terminalCursorStyle: sanitizeTerminalCursorStyle(parsed.terminalCursorStyle),
+		terminalScrollback: clampTerminalScrollback(parsed.terminalScrollback),
+		terminalGpuAcceleration: sanitizeTerminalGpuAcceleration(parsed.terminalGpuAcceleration),
+		terminalTitleMode: sanitizeTerminalTitleMode(parsed.terminalTitleMode),
+		terminalCopyOnSelection: sanitizeTerminalCopyOnSelection(parsed.terminalCopyOnSelection),
 		// 字号档位：脏值/缺字段一律回落基准档（13 / 12.5 => 乘数 1，等于迁移前现状）
 		uiFontSize: clampUiFontSize(parsed.uiFontSize),
 		codeFontSize: clampCodeFontSize(parsed.codeFontSize),
