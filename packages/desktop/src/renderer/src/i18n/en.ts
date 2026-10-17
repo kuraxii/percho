@@ -339,6 +339,9 @@ export const en: Messages = {
 			"This removes the project from Percho; it has no sessions, and the project files on your computer stay untouched.",
 		searchEmpty: "No matching sessions",
 		noSessions: "No sessions",
+		/** Session-tree node chevron: collapse the subtree (in-memory; hidden while search force-expands) */
+		collapseNode: "Collapse subtree",
+		expandNode: "Expand subtree",
 		/** Per-group "show more" button at the end of the list (16 more rows each click) */
 		showMore: "Show more",
 	},

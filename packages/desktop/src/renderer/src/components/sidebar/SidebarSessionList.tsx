@@ -21,6 +21,7 @@ export function SidebarSessionList({
 	hasMore,
 	onShowMore,
 	onSelect,
+	onToggleCollapse,
 	onContextMenu,
 }: {
 	/** 当前应显示的会话（已由调用方按 `6 + 16 × 点击数` 裁剪，顺序不变） */
@@ -32,6 +33,8 @@ export function SidebarSessionList({
 	hasMore: boolean;
 	onShowMore: () => void;
 	onSelect: (session: SessionMeta) => void;
+	/** 点折叠箭头（sessionId）：子树收起/展开由内存态维护 */
+	onToggleCollapse: (sessionId: string) => void;
 	onContextMenu: (session: SessionMeta, anchor: MenuAnchor) => void;
 }) {
 	if (sessions.length === 0) {
@@ -41,14 +44,17 @@ export function SidebarSessionList({
 		<div>
 			{/* 可测试性只读属性（验收脚本按它定位列表并断言「这里没有自己的滚动」；纯属性，不影响视觉） */}
 			<div data-sidebar-session-list="">
-				{sessions.map(({ session, pinned, depth }) => (
+				{sessions.map(({ session, pinned, depth, hasChildren, collapsed }) => (
 					<SessionRow
 						key={session.sessionId}
 						session={session}
 						active={session.sessionId === activeSessionId}
 						pinned={pinned}
 						depth={depth}
+						hasChildren={hasChildren}
+						collapsed={collapsed}
 						onSelect={() => onSelect(session)}
+						onToggleCollapse={hasChildren ? () => onToggleCollapse(session.sessionId) : undefined}
 						onContextMenu={(anchor) => onContextMenu(session, anchor)}
 					/>
 				))}

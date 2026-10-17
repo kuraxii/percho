@@ -132,7 +132,7 @@ describe("deriveSidebarGroups · 血缘树形化", () => {
 		expect(alpha?.sessions[1]?.depth).toBe(0);
 	});
 
-	it("搜索不带父子关系：命中子但不命中父时，子直接显示为根", () => {
+	it("搜索命中传播：命中子但不命中父时，父保留（祖先链强制展开）、子挂其下", () => {
 		const root = fork("root", P1, 100, undefined);
 		const child = fork("child-x", P1, 200, root.sessionFile);
 		const result = derive({
@@ -141,8 +141,63 @@ describe("deriveSidebarGroups · 血缘树形化", () => {
 			search: "child-x",
 		});
 		const alpha = result.projects.find((p) => p.cwd === P1);
-		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["child-x"]);
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["root", "child-x"]);
+		expect(alpha?.sessions.map((s) => s.depth)).toEqual([0, 1]);
+		expect(alpha?.sessions.map((s) => s.hasChildren)).toEqual([true, false]);
+	});
+
+	it("搜索命中传播不跨 cwd：父在另一目录时子直接当根", () => {
+		const root = fork("root", P2, 100, undefined);
+		const child = fork("child-y", P1, 200, root.sessionFile);
+		const result = derive({ sessions: [root, child], projects: [project(P1, 0)], search: "child-y" });
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["child-y"]);
 		expect(alpha?.sessions.map((s) => s.depth)).toEqual([0]);
+	});
+
+	it("折叠：父折叠后子树不输出，父保留（hasChildren + collapsed）", () => {
+		const root = fork("root", P1, 100);
+		const childA = fork("child-a", P1, 200, root.sessionFile);
+		const childB = fork("child-b", P1, 300, root.sessionFile);
+		const result = derive({
+			sessions: [root, childA, childB],
+			projects: [project(P1, 0)],
+			collapsedSessionNodes: ["root"],
+		});
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["root"]);
+		expect(alpha?.sessions.map((s) => s.hasChildren)).toEqual([true]);
+		expect(alpha?.sessions.map((s) => s.collapsed)).toEqual([true]);
+	});
+
+	it("折叠后搜索命中子：祖先被强制展开，子树照常显示", () => {
+		const root = fork("root", P1, 100);
+		const child = fork("child-z", P1, 200, root.sessionFile);
+		const result = derive({
+			sessions: [root, child],
+			projects: [project(P1, 0)],
+			search: "child-z",
+			collapsedSessionNodes: ["root"],
+		});
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["root", "child-z"]);
+		expect(alpha?.sessions.map((s) => s.collapsed)).toEqual([false, false]);
+	});
+
+	it("置顶扁平不受折叠影响（不看父子，无 hasChildren）", () => {
+		const root = fork("root", P1, 100);
+		const child = fork("child", P1, 200, root.sessionFile);
+		const result = derive({
+			sessions: [root, child],
+			projects: [project(P1, 0)],
+			pinnedSessions: ["root", "child"],
+			collapsedSessionNodes: ["root"],
+		});
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		// 置顶区按最后活动倒序（child 更新），不看父子、不受折叠影响
+		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["child", "root"]);
+		expect(alpha?.sessions.map((s) => s.hasChildren ?? false)).toEqual([false, false]);
+		expect(alpha?.sessions.map((s) => s.collapsed ?? false)).toEqual([false, false]);
 	});
 
 	it("无血缘的普通会话不受影响（depth 缺省，顺序保持倒序）", () => {

@@ -15,12 +15,15 @@ export function ProjectSection({
 	activeSessionId,
 	batching,
 	onTogglePin,
+	onToggleCollapse,
 	onRemoveProject,
 }: {
 	projects: SidebarProjectEntry[];
 	activeSessionId: string | null;
 	batching: SidebarBatching;
 	onTogglePin: (cwd: string) => void;
+	/** 会话树节点折叠/展开（内存态，Sidebar 持有） */
+	onToggleCollapse: (sessionId: string) => void;
 	onRemoveProject: (cwd: string) => void;
 }) {
 	const t = useT();
@@ -47,6 +50,7 @@ export function ProjectSection({
 					totalSessions={project.totalSessions}
 					batching={batching}
 					onTogglePin={onTogglePin}
+					onToggleCollapse={onToggleCollapse}
 					onRemove={() => onRemoveProject(project.cwd)}
 				/>
 			))}

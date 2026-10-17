@@ -22,6 +22,10 @@ export type SidebarSession = {
 	 * 默认行为与上游一致，上游改了也不会崩。
 	 */
 	depth?: number;
+	/** 有子会话（非置顶血缘树内）：有 → 行首出折叠箭头（置顶区平铺不看父子，不设） */
+	hasChildren?: boolean;
+	/** 当前子树是否收起：收起 → 子树行不渲染（仅非置顶树内） */
+	collapsed?: boolean;
 };
 
 /** 一个可折叠分组（日常空间与每个项目同构，渲染侧共用一套行组件） */
@@ -104,6 +108,11 @@ export type SidebarGroupsInput = {
 	/** 搜索词（命中名称或 sessionId，空串不过滤） */
 	search: string;
 	/**
+	 * 手动折叠的父会话 id（收起其子树；内存态，由调用方持有）。搜索模式下的命中祖先
+	 * 会被强制展开（forceExpand 在派生层计算），折叠集本身不受搜索影响。
+	 */
+	collapsedSessionNodes?: readonly string[];
+	/**
 	 * 当前会话所在目录（新会话页 = draft 的目录），只用来算默认展开组。
 	 * **显式传入、不从 `sessions` 反查**：只读子会话会被导航投影过滤掉，反查会丢信息；
 	 * 传 `null` 就是「没有当前目录」（如新会话页还没选项目），不得回退去反查。
@@ -126,6 +135,7 @@ export type SidebarNavigationInput = {
 	/** 手动添加过的项目目录（`projects.addedProjects`） */
 	addedProjects: string[];
 	search: string;
+	collapsedSessionNodes?: readonly string[];
 	activeCwd: string | null;
 	pinnedSessions: readonly string[];
 	pinnedProjects: readonly string[];
@@ -138,6 +148,9 @@ function matchesSearch(session: SessionMeta, query: string): boolean {
 	return (session.name ?? "").toLowerCase().includes(query) || session.sessionId.includes(query);
 }
 
+/** 空折叠集/强制展开集（避免每组分一个空 Set） */
+const EMPTY_SET: ReadonlySet<string> = new Set();
+
 /**
  * 会话血缘树形化（纯函数）：把一组会话按 `parentSessionPath` 聚成森林，再展平成带 `depth`
  * 的渲染序列（供 `SessionRow` 缩进 + 父连线）。规则：
@@ -147,8 +160,16 @@ function matchesSearch(session: SessionMeta, query: string): boolean {
  * - 排序：父会话之间按最后活动倒序，子会话紧跟父会话下面、子内也按最后活动倒序。
  * - 置顶分区由调用方 `groupSessions` 先行完成（置顶会话不参与血缘结构），本函数只见非置顶。
  * - 搜索不带父子关系：被搜索过滤掉父时，子自然当根，零额外逻辑。
+ *
+ * 折叠：`collapsed` 里的父 sessionId 收起其子树（节点本身保留、深度不变、子行不输出）；
+ * `forceExpand` 里的 id 即使被折叠也强制展开（搜索命中祖先链），两者交集以 forceExpand 为准。
  */
-function buildSessionForest(list: readonly SessionMeta[]): { session: SessionMeta; depth: number }[] {
+function buildSessionForest(
+	list: readonly SessionMeta[],
+	collapsed: ReadonlySet<string> = EMPTY_SET,
+	forceExpand: ReadonlySet<string> = EMPTY_SET,
+	searching = false,
+): { session: SessionMeta; depth: number; hasChildren: boolean; collapsed: boolean }[] {
 	const byPath = new Map<string, SessionMeta[]>();
 	const roots: SessionMeta[] = [];
 	const bySessionFile = new Map(list.map((session) => [session.sessionFile, session]));
@@ -164,33 +185,88 @@ function buildSessionForest(list: readonly SessionMeta[]): { session: SessionMet
 	}
 	const byActivity = (a: SessionMeta, b: SessionMeta) =>
 		(b.modifiedAt ?? b.createdAt) - (a.modifiedAt ?? a.createdAt);
-	roots.sort(byActivity);
+	if (searching) {
+		// 搜索模式：根按「子树内最后活动」倒序——命中的子树整体提前，避免不命中的老祖先
+		// （按自身活动时间可能很旧）把命中子带沉底；非命中根按自身活动时间排后。
+		const subtreeMax = (root: SessionMeta): number => {
+			let max = root.modifiedAt ?? root.createdAt ?? 0;
+			const stack = [...(byPath.get(root.sessionId) ?? [])];
+			while (stack.length > 0) {
+				const node = stack.pop();
+				if (!node) continue;
+				const activity = node.modifiedAt ?? node.createdAt ?? 0;
+				if (activity > max) max = activity;
+				stack.push(...(byPath.get(node.sessionId) ?? []));
+			}
+			return max;
+		};
+		roots.sort((a, b) => subtreeMax(b) - subtreeMax(a));
+	} else {
+		roots.sort(byActivity);
+	}
 	for (const siblings of byPath.values()) siblings.sort(byActivity);
 
-	const rows: { session: SessionMeta; depth: number }[] = [];
+	const rows: { session: SessionMeta; depth: number; hasChildren: boolean; collapsed: boolean }[] = [];
 	const visit = (session: SessionMeta, depth: number) => {
-		rows.push({ session, depth });
-		for (const child of byPath.get(session.sessionId) ?? []) visit(child, depth + 1);
+		const children = byPath.get(session.sessionId) ?? [];
+		const isCollapsed =
+			children.length > 0 && collapsed.has(session.sessionId) && !forceExpand.has(session.sessionId);
+		rows.push({ session, depth, hasChildren: children.length > 0, collapsed: isCollapsed });
+		if (isCollapsed) return;
+		for (const child of children) visit(child, depth + 1);
 	};
 	for (const root of roots) visit(root, 0);
 	return rows;
 }
 
+/**
+ * 命中传播（搜索模式，纯函数）：从命中会话出发沿 `parentSessionPath` 向上收集祖先链。
+ * 祖先即使不命中也要保留显示（命中子挂在其下），且跨 cwd 组不传播（父子不同目录各自当根，与现状一致）。
+ */
+function collectAncestors(
+	hits: readonly SessionMeta[],
+	all: readonly SessionMeta[],
+	cwd: string,
+): Set<string> {
+	const byFile = new Map(all.map((session) => [session.sessionFile, session]));
+	const result = new Set<string>();
+	const stack = [...hits];
+	while (stack.length > 0) {
+		const current = stack.pop();
+		if (!current) continue;
+		const parent = current.parentSessionPath ? byFile.get(current.parentSessionPath) : undefined;
+		if (parent && parent.cwd === cwd && !result.has(parent.sessionId)) {
+			result.add(parent.sessionId);
+			stack.push(parent);
+		}
+	}
+	return result;
+}
+
 /** 组内会话：置顶扁平在前（不看父子关系）→ 其余按血缘树形化（父间倒序、子紧跟父、子内倒序） */
-function groupSessions(list: readonly SessionMeta[], pinned: ReadonlySet<string>): SidebarSession[] {
+function groupSessions(
+	list: readonly SessionMeta[],
+	pinned: ReadonlySet<string>,
+	collapsed: ReadonlySet<string> = EMPTY_SET,
+	forceExpand: ReadonlySet<string> = EMPTY_SET,
+	searching = false,
+): SidebarSession[] {
 	const sorted = [...list].sort((a, b) => (b.modifiedAt ?? b.createdAt) - (a.modifiedAt ?? a.createdAt));
 	const partitioned = partitionSessionsByPin(sorted, [...pinned]);
 	const pinSet = new Set(pinned);
+	// 置顶区平铺、不看父子、无 depth/hasChildren（v 定稿，用户确认保持）
 	const pinnedRows: SidebarSession[] = partitioned
 		.filter((session) => pinSet.has(session.sessionId))
 		.map((session) => ({ session, pinned: true }));
 	const rest = partitioned.filter((session) => !pinSet.has(session.sessionId));
 	return [
 		...pinnedRows,
-		...buildSessionForest(rest).map((row) => ({
+		...buildSessionForest(rest, collapsed, forceExpand, searching).map((row) => ({
 			session: row.session,
 			pinned: false,
 			depth: row.depth,
+			hasChildren: row.hasChildren,
+			collapsed: row.collapsed,
 		})),
 	];
 }
@@ -211,14 +287,37 @@ function groupSessions(list: readonly SessionMeta[], pinned: ReadonlySet<string>
  */
 export function deriveSidebarGroups(input: SidebarGroupsInput): SidebarGroupsResult {
 	const query = input.search.trim().toLowerCase();
-	const visible = input.sessions.filter((session) => matchesSearch(session, query));
+	const hits = input.sessions.filter((session) => matchesSearch(session, query));
 	const searching = query.length > 0;
+	const collapsedSet = new Set(input.collapsedSessionNodes ?? []);
 
-	const byCwd = new Map<string, SessionMeta[]>();
-	for (const session of visible) {
-		const list = byCwd.get(session.cwd);
+	// 命中按 cwd 分组（组显示/计数只看命中）；渲染列表 = 命中 ∪ 祖先（搜索时祖先即使不命中也保留，
+	// 挂在命中子之上；祖先的其它非命中子树不在列表里，展平时天然剪掉，零额外逻辑）。
+	const hitsByCwd = new Map<string, SessionMeta[]>();
+	for (const session of hits) {
+		const list = hitsByCwd.get(session.cwd);
 		if (list) list.push(session);
-		else byCwd.set(session.cwd, [session]);
+		else hitsByCwd.set(session.cwd, [session]);
+	}
+	const visibleByCwd = new Map<string, SessionMeta[]>();
+	const forceExpandByCwd = new Map<string, Set<string>>();
+	if (searching) {
+		for (const [cwd, list] of hitsByCwd) {
+			const ancestors = collectAncestors(list, input.sessions, cwd);
+			forceExpandByCwd.set(cwd, ancestors);
+			const byId = new Map<string, SessionMeta>(list.map((session) => [session.sessionId, session]));
+			for (const id of ancestors) {
+				const session = input.sessions.find((s) => s.sessionId === id);
+				if (session && !byId.has(id)) byId.set(id, session);
+			}
+			visibleByCwd.set(cwd, [...byId.values()]);
+		}
+	} else {
+		for (const session of input.sessions) {
+			const list = visibleByCwd.get(session.cwd);
+			if (list) list.push(session);
+			else visibleByCwd.set(session.cwd, [session]);
+		}
 	}
 
 	const pinnedSessions = new Set(input.pinnedSessions);
@@ -229,21 +328,30 @@ export function deriveSidebarGroups(input: SidebarGroupsInput): SidebarGroupsRes
 	const isExpanded = (key: string) => expandedKeys.includes(key);
 
 	const dailyCwd = getDailyDirCached();
-	const dailySessions = dailyCwd ? (byCwd.get(dailyCwd) ?? []) : [];
+	const dailySessions = dailyCwd ? (visibleByCwd.get(dailyCwd) ?? []) : [];
+	const dailyHits = searching && dailyCwd ? (hitsByCwd.get(dailyCwd) ?? []) : [];
 	const daily =
-		dailyCwd && (!searching || dailySessions.length > 0)
+		dailyCwd && (!searching || dailyHits.length > 0)
 			? {
 					key: dailyCwd,
 					kind: "daily" as const,
 					cwd: dailyCwd,
 					label: null,
-					sessionCount: dailySessions.length,
-					sessions: groupSessions(dailySessions, pinnedSessions),
+					sessionCount: searching ? dailyHits.length : dailySessions.length,
+					sessions: groupSessions(
+						dailySessions,
+						pinnedSessions,
+						collapsedSet,
+						searching ? (forceExpandByCwd.get(dailyCwd) ?? EMPTY_SET) : EMPTY_SET,
+						searching,
+					),
 					expanded: isExpanded(dailyCwd),
 				}
 			: null;
 
-	const matched = input.projects.filter((project) => !searching || (byCwd.get(project.cwd)?.length ?? 0) > 0);
+	const matched = input.projects.filter(
+		(project) => !searching || (hitsByCwd.get(project.cwd)?.length ?? 0) > 0,
+	);
 	const byCwdProject = new Map(matched.map((project) => [project.cwd, project]));
 	const pinnedProjects = input.pinnedProjects
 		.map((cwd) => byCwdProject.get(cwd))
@@ -254,14 +362,20 @@ export function deriveSidebarGroups(input: SidebarGroupsInput): SidebarGroupsRes
 	return {
 		daily,
 		projects: ordered.map((project) => {
-			const sessions = byCwd.get(project.cwd) ?? [];
+			const sessions = visibleByCwd.get(project.cwd) ?? [];
 			return {
 				key: project.cwd,
 				kind: "project" as const,
 				cwd: project.cwd,
 				label: project.name,
-				sessionCount: sessions.length,
-				sessions: groupSessions(sessions, pinnedSessions),
+				sessionCount: searching ? (hitsByCwd.get(project.cwd)?.length ?? 0) : sessions.length,
+				sessions: groupSessions(
+					sessions,
+					pinnedSessions,
+					collapsedSet,
+					searching ? (forceExpandByCwd.get(project.cwd) ?? EMPTY_SET) : EMPTY_SET,
+					searching,
+				),
 				expanded: isExpanded(project.cwd),
 				pinned: pinnedSet.has(project.cwd),
 				totalSessions: project.sessionCount,
@@ -283,6 +397,14 @@ export function primaryNavigationSessions(
 }
 
 /**
+ * 折叠 / 展开一个会话树节点（纯逻辑）：`current` 里的 id = 已折叠（收起子树），翻转它。
+ * 内存态（调用方持有），与组级 `toggleExpandedGroup` 的持久化语义无关。
+ */
+export function toggleCollapsedNode(current: readonly string[], key: string): string[] {
+	return current.includes(key) ? current.filter((item) => item !== key) : [...current, key];
+}
+
+/**
  * 左栏装配（Sidebar 与单测**共用同一条路径**，不在测试里手抄装配顺序）：
  * 历史 + 内存合并 → 统一过滤只读子会话 → **同一份集合**同时喂给项目表与分组派生。
  * 项目表必须也用过滤后的集合：否则只读子会话所在目录会凭空长出一个（计数虚高的）项目组。
@@ -293,6 +415,7 @@ export function deriveSidebarNavigation(input: SidebarNavigationInput): SidebarG
 		sessions,
 		projects: deriveProjects({ allSessions: sessions, addedProjects: input.addedProjects }),
 		search: input.search,
+		collapsedSessionNodes: input.collapsedSessionNodes,
 		activeCwd: input.activeCwd,
 		pinnedSessions: input.pinnedSessions,
 		pinnedProjects: input.pinnedProjects,

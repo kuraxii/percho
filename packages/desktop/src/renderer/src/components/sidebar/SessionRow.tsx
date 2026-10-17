@@ -1,7 +1,7 @@
 import type { SessionMeta } from "@percho/shared";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useT } from "../../i18n";
-import { PinIcon } from "../icons";
+import { ChevronDownIcon, ChevronRightIcon, PinIcon } from "../icons";
 import { sessionTitle, useSessionStatus } from "../session/session-status";
 import type { MenuAnchor } from "../ui/place-menu";
 
@@ -25,7 +25,10 @@ export function SessionRow({
 	active,
 	pinned = false,
 	depth = 0,
+	hasChildren = false,
+	collapsed = false,
 	onSelect,
+	onToggleCollapse,
 	onContextMenu,
 }: {
 	session: SessionMeta;
@@ -33,7 +36,12 @@ export function SessionRow({
 	pinned?: boolean;
 	/** 血缘层级（根 = 0）：>0 时整行右移（每级 14px）并在父图标槽中心画一条竖线 */
 	depth?: number;
+	/** 有子会话：行首出折叠箭头（置顶区平铺不看父子，不设） */
+	hasChildren?: boolean;
+	/** 子树当前收起（箭头状态；收起时子树行由派生层不渲染） */
+	collapsed?: boolean;
 	onSelect: () => void;
+	onToggleCollapse?: () => void;
 	onContextMenu?: (anchor: MenuAnchor) => void;
 }) {
 	const t = useT();
@@ -68,10 +76,24 @@ export function SessionRow({
 					style={{ left: 14 + (depth - 1) * 14 }}
 				/>
 			)}
-			{/* 图标槽：置顶才放图钉，不带图钉时占位不空转（保证标题 x 恒定） */}
-			<span className="grid h-4 w-4 shrink-0 place-items-center text-ink-faint" aria-hidden="true">
-				{pinned && <PinIcon size={12} />}
-			</span>
+			{/* 图标槽：有子 → 折叠箭头（点击不触发开会话）；置顶才放图钉；不带时占位不空转（标题 x 恒定） */}
+			{hasChildren ? (
+				<button
+					type="button"
+					aria-label={collapsed ? t("sidebar.expandNode") : t("sidebar.collapseNode")}
+					className="grid h-4 w-4 shrink-0 place-items-center rounded text-ink-faint transition-colors hover:text-ink-2"
+					onClick={(event) => {
+						event.stopPropagation();
+						onToggleCollapse?.();
+					}}
+				>
+					{collapsed ? <ChevronRightIcon size={10} /> : <ChevronDownIcon size={10} />}
+				</button>
+			) : (
+				<span className="grid h-4 w-4 shrink-0 place-items-center text-ink-faint" aria-hidden="true">
+					{pinned && <PinIcon size={12} />}
+				</span>
+			)}
 			<span className="min-w-0 flex-1 truncate">{title}</span>
 			{status !== "idle" && (
 				<span

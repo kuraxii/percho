@@ -1,7 +1,7 @@
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { selectActiveCwd } from "../../lib/active-cwd";
-import { deriveSidebarNavigation } from "../../lib/sidebar-groups";
+import { deriveSidebarNavigation, toggleCollapsedNode } from "../../lib/sidebar-groups";
 import { useEdgeFade } from "../../lib/use-edge-fade";
 import { useProjectsStore } from "../../stores/projects";
 import { useSessionsStore } from "../../stores/sessions";
@@ -63,6 +63,12 @@ export function Sidebar() {
 	const addedProjects = useProjectsStore((s) => s.addedProjects);
 	const deleteProject = useProjectsStore((s) => s.deleteProject);
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
+	// 会话树节点折叠的内存态（纯内存，不写 ui-state）：
+	// 搜索期间命中祖先由派生层临时强制展开，这里只存用户手动点的折叠。
+	const [collapsedSessionNodes, setCollapsedSessionNodes] = useState<string[]>([]);
+	const toggleNodeCollapse = useCallback((sessionId: string) => {
+		setCollapsedSessionNodes((current) => toggleCollapsedNode(current, sessionId));
+	}, []);
 	// 内存会话（含刚创建还没进历史的真实会话与只读子会话）：与磁盘历史合并成左栏数据源（spec D2）
 	const memorySessions = useSessionsStore((s) => s.sessions);
 	// 默认展开组使用同一当前目录规则，不依赖外部seed的兼容镜像。
@@ -76,6 +82,7 @@ export function Sidebar() {
 				memory: memorySessions,
 				addedProjects,
 				search,
+				collapsedSessionNodes,
 				activeCwd,
 				pinnedSessions,
 				pinnedProjects,
@@ -87,6 +94,7 @@ export function Sidebar() {
 			memorySessions,
 			addedProjects,
 			search,
+			collapsedSessionNodes,
 			activeCwd,
 			pinnedSessions,
 			pinnedProjects,
@@ -128,13 +136,19 @@ export function Sidebar() {
 					className="edge-fade min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pt-0.5 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 				>
 					{data.daily && (
-						<SidebarGroup group={data.daily} activeSessionId={activeSessionId} batching={batching} />
+						<SidebarGroup
+							group={data.daily}
+							activeSessionId={activeSessionId}
+							batching={batching}
+							onToggleCollapse={toggleNodeCollapse}
+						/>
 					)}
 					<ProjectSection
 						projects={data.projects}
 						activeSessionId={activeSessionId}
 						batching={batching}
 						onTogglePin={toggleProjectPin}
+						onToggleCollapse={toggleNodeCollapse}
 						onRemoveProject={(cwd) => {
 							// 计数等删除真的成功再清：失败了就留着，别让「已显示多少条」比真实数据跑在前面
 							void deleteProject(cwd).then(

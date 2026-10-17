@@ -29,6 +29,7 @@ export function SidebarGroup({
 	pinned = false,
 	totalSessions = 0,
 	onTogglePin,
+	onToggleCollapse,
 	onRemove,
 }: {
 	group: Group;
@@ -38,6 +39,8 @@ export function SidebarGroup({
 	pinned?: boolean;
 	totalSessions?: number;
 	onTogglePin?: (cwd: string) => void;
+	/** 会话树节点折叠/展开（内存态，Sidebar 持有） */
+	onToggleCollapse: (sessionId: string) => void;
 	onRemove?: () => void;
 }) {
 	const t = useT();
@@ -78,6 +81,7 @@ export function SidebarGroup({
 						hasMore={hasMoreSessions(group.sessions.length, moreClicks)}
 						onShowMore={() => batching.showMore(group.key)}
 						onSelect={(session) => void openSession(session)}
+						onToggleCollapse={onToggleCollapse}
 						onContextMenu={(session, anchor) => sessionMenu.open(session, anchor)}
 					/>
 				</div>
