@@ -17,6 +17,7 @@ import {
 	type TerminalTab,
 	tabGroup,
 	updatePane,
+	updateSplitRatios,
 	updateTab,
 	updateTabInGroups,
 	useTerminalStore,
@@ -204,5 +205,56 @@ describe("terminal group 模型", () => {
 		const hit = tabGroup(useTerminalStore.getState().groups, tabId);
 		expect(hit?.pane.tabs.find((t) => t.id === tabId)?.title).toBe("zsh");
 		useTerminalStore.setState({ open: false, groups: [], activeGroupId: null, activePaneId: null });
+	});
+});
+
+describe("split 比例（ratios，拖拽 divider 数据层）", () => {
+	it("splitAt 产生的新 split 节点无 ratios（等分）", () => {
+		const pane = paneWith("a");
+		const { root } = splitAt(pane, pane.id);
+		expect(asSplit(root).ratios).toBeUndefined();
+	});
+
+	it("updateSplitRatios：命中 splitId 更新并保留结构；未命中返回原引用", () => {
+		const pane = paneWith("a");
+		const { root } = splitAt(pane, pane.id);
+		const split = asSplit(root);
+		const updated = asSplit(updateSplitRatios(root, split.id, [0.7, 0.3]));
+		expect(updated.ratios).toEqual([0.7, 0.3]);
+		expect(asPane(updated.children[0]).id).toBe(pane.id);
+		expect(updateSplitRatios(root, 99999, [0.5, 0.5])).toBe(root);
+	});
+
+	it("removeTabFromTree 结构变化后 ratios 长度错位 → 重置为等分（undefined）", () => {
+		const a = paneWith("a");
+		const b = paneWith("b");
+		const c = paneWith("c");
+		const root: TerminalNode = {
+			kind: "split",
+			id: 700,
+			direction: "row",
+			children: [a, b, c],
+			ratios: [0.5, 0.3, 0.2],
+		};
+		const r = removeTabFromTree(root, tabOf(b).id);
+		const split = asSplit(r.root ?? undefined);
+		expect(split.children).toHaveLength(2);
+		expect(split.ratios).toBeUndefined();
+	});
+
+	it("setSplitRatios：store 更新 split 节点（未命中不改）", () => {
+		const store = useTerminalStore.getState();
+		const tabId = store.newTerminal();
+		const root = useTerminalStore.getState().groups[0]?.root;
+		if (root?.kind !== "pane") throw new Error("expected pane root");
+		store.splitPane(root.id);
+		const splitRoot = useTerminalStore.getState().groups[0]?.root;
+		if (splitRoot?.kind !== "split") throw new Error("expected split root");
+		store.setSplitRatios(splitRoot.id, [0.7, 0.3]);
+		expect(asSplit(useTerminalStore.getState().groups[0]?.root).ratios).toEqual([0.7, 0.3]);
+		store.setSplitRatios(99999, [0.9, 0.1]);
+		expect(asSplit(useTerminalStore.getState().groups[0]?.root).ratios).toEqual([0.7, 0.3]);
+		useTerminalStore.setState({ open: false, groups: [], activeGroupId: null, activePaneId: null });
+		void tabId;
 	});
 });

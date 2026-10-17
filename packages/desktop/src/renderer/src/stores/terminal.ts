@@ -39,12 +39,13 @@ export interface TerminalPane {
 	activeTabId: number | null;
 }
 
-/** 分屏节点：子节点按 direction 并排 */
+/** 分屏节点：子节点按 direction 并排；ratios 与 children 一一对应（undefined = 等分，对齐 vscode Sizing.Distribute） */
 export interface TerminalSplitNode {
 	kind: "split";
 	id: number;
 	direction: TerminalDir;
 	children: TerminalNode[];
+	ratios?: number[];
 }
 
 export type TerminalNode = TerminalPane | TerminalSplitNode;
@@ -216,12 +217,33 @@ export function removeTabFromTree(
 		const children = node.children.map(walk).filter((c): c is TerminalNode => c !== null);
 		if (children.length === 0) return null;
 		if (children.length === 1) return children[0] ?? null;
+		// 结构变化后 ratios 长度错位 → 重置为等分（对齐 vscode removeView 用 Sizing.Distribute）
+		if (node.ratios !== undefined && node.ratios.length !== children.length) {
+			return { ...node, children, ratios: undefined };
+		}
 		return { ...node, children };
 	};
 	return { root: walk(root), removed: true };
 }
 
 // ── group 辅助（export 供测试）───────────────────────────────────────────
+
+/** 递归更新 split 节点的 ratios（命中 splitId 时替换，未命中原样返回保持引用） */
+export function updateSplitRatios(
+	node: TerminalNode,
+	splitId: number,
+	ratios: number[] | undefined,
+): TerminalNode {
+	if (node.kind === "pane") return node;
+	if (node.id === splitId) return { ...node, ratios };
+	let changed = false;
+	const children = node.children.map((child) => {
+		const r = updateSplitRatios(child, splitId, ratios);
+		if (r !== child) changed = true;
+		return r;
+	});
+	return changed ? { ...node, children } : node;
+}
 
 /** 按 tab id 找所属 group + pane */
 export function tabGroup(
@@ -289,6 +311,8 @@ interface TerminalStore {
 	/** 标题：默认 shell 名，OSC 7/9;9/1337 CurrentDir 更新为 cwd 名，OSC 0/2 显式标题覆盖 */
 	setTabTitle: (tabId: number, title: string) => void;
 	markTabExited: (tabId: number) => void;
+	/** 拖拽 divider 调整分屏比例（undefined = 等分；对齐 vscode sash 拖拽 + distributeViewSizes） */
+	setSplitRatios: (splitId: number, ratios: number[] | undefined) => void;
 	/** 拖拽预览：只改内存高度（持久化交 ui-preferences.commitTerminalHeight） */
 	setHeight: (px: number) => void;
 	setMaximized: (maximized: boolean) => void;
@@ -399,6 +423,10 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
 	markTabExited: (tabId) =>
 		set((state) => ({
 			groups: updateTabInGroups(state.groups, tabId, (t) => ({ ...t, status: "exited" })),
+		})),
+	setSplitRatios: (splitId, ratios) =>
+		set((state) => ({
+			groups: state.groups.map((g) => ({ ...g, root: updateSplitRatios(g.root, splitId, ratios) })),
 		})),
 	setHeight: (px) => set({ height: px }),
 	setMaximized: (maximized) => set({ maximized }),

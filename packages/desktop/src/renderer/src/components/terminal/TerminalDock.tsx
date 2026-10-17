@@ -1,8 +1,22 @@
 import { Fragment, type KeyboardEvent, type PointerEvent, useEffect, useRef } from "react";
 import { useT } from "../../i18n";
-import { collectTabs, type TerminalNode, type TerminalPane, useTerminalStore } from "../../stores/terminal";
+import {
+	activePaneOf,
+	collectTabs,
+	type TerminalNode,
+	type TerminalPane,
+	useTerminalStore,
+} from "../../stores/terminal";
 import { useUiPreferencesStore } from "../../stores/ui-preferences";
-import { ChevronDownIcon, MaximizeIcon, PlusIcon, RestoreIcon, SplitIcon, TerminalIcon, TrashIcon } from "../icons";
+import {
+	ChevronDownIcon,
+	MaximizeIcon,
+	PlusIcon,
+	RestoreIcon,
+	SplitIcon,
+	TerminalIcon,
+	TrashIcon,
+} from "../icons";
 import { TerminalView, type TerminalViewHandle } from "./TerminalView";
 
 const activateOnKey = (event: KeyboardEvent, activate: () => void) => {
@@ -17,15 +31,22 @@ const activateOnKey = (event: KeyboardEvent, activate: () => void) => {
  * 焦点透传：点击分屏区域 → 激活该 group + pane，并 focus 对应 xterm 实例
  * （避坑点：键盘输入立即传导至目标子进程，不依赖浏览器焦点默认行为）。
  */
-function PaneView({ pane, groupId }: { pane: TerminalPane; groupId: number }): React.JSX.Element {
-	const focusHandles = useRef(new Map<number, TerminalViewHandle>());
+function PaneView({
+	pane,
+	groupId,
+	focusHandles,
+}: {
+	pane: TerminalPane;
+	groupId: number;
+	focusHandles: React.MutableRefObject<Map<number, TerminalViewHandle>>;
+}): React.JSX.Element {
 	return (
 		<div
 			className="relative h-full min-h-0 min-w-0 flex-1"
-			onPointerDown={() => {
+			onPointerDownCapture={() => {
 				useTerminalStore.getState().activatePane(groupId, pane.id);
-				// xterm 可能在随后的 mousedown/click 处理中重置焦点：本帧 focus + 下一帧兜底，
-				// 确保分屏点击后键盘输入落在目标终端
+				// 捕获阶段先行 focus：xterm 内部 mousedown/selection 处理不抢焦点，
+				// 且捕获阶段保证即使子元素 stopPropagation 也能收到点击；本帧 + 下一帧双兜底
 				const focusTab = () => focusHandles.current.get(pane.activeTabId ?? -1)?.focus();
 				focusTab();
 				requestAnimationFrame(focusTab);
@@ -53,17 +74,131 @@ function PaneView({ pane, groupId }: { pane: TerminalPane; groupId: number }): R
 	);
 }
 
-/** 递归 split 树：row = 左右并排（divider 竖线），col = 上下并排（divider 横线） */
-function TerminalSplitView({ node, groupId }: { node: TerminalNode; groupId: number }): React.JSX.Element {
-	if (node.kind === "pane") return <PaneView pane={node} groupId={groupId} />;
+/** 递归 split 树：row = 左右并排（divider 竖线），col = 上下并排（divider 横线）。
+ * divider 支持拖拽调整相邻 pane 比例（对齐 vscode SplitView sash：
+ * onSashChange 里 delta = current - start → resize(index, delta)，clamp 到 minimumSize=80px），
+ * 双击恢复等分（对齐 onDidSashReset → distributeViewSizes），键盘 ←/→（row）↑/↓（col）微调。 */
+function TerminalSplitView({
+	node,
+	groupId,
+	focusHandles,
+}: {
+	node: TerminalNode;
+	groupId: number;
+	focusHandles: React.MutableRefObject<Map<number, TerminalViewHandle>>;
+}): React.JSX.Element {
+	const containerRef = useRef<HTMLDivElement>(null);
+	const setSplitRatios = useTerminalStore((s) => s.setSplitRatios);
+	const dragRef = useRef<{
+		index: number;
+		start: number;
+		old: number[];
+		row: boolean;
+		total: number;
+	} | null>(null);
+	if (node.kind === "pane") return <PaneView pane={node} groupId={groupId} focusHandles={focusHandles} />;
 	const row = node.direction === "row";
+	const panePx = (): { px: number[]; total: number } => {
+		const container = containerRef.current;
+		const total = row ? (container?.clientWidth ?? 0) : (container?.clientHeight ?? 0);
+		if (!container || total <= 0) return { px: [], total: 0 };
+		const panes = Array.from(container.children).filter(
+			(el): el is HTMLElement => el instanceof HTMLElement && el.dataset.terminalPane === "true",
+		);
+		const px = panes.map((el) =>
+			row ? el.getBoundingClientRect().width : el.getBoundingClientRect().height,
+		);
+		return { px, total };
+	};
+	/** 相邻两 pane 按 delta 比例重分配（其他 pane 不动），clamp 最小 80px（vscode SplitPaneMinSize） */
+	const applyDelta = (index: number, delta: number, old: number[], total: number): number[] | null => {
+		// divider 位于 pane[index-1] 与 pane[index] 之间（渲染在 child[index] 之前）
+		if (index < 1 || index >= old.length || total <= 0) return null;
+		const minRatio = Math.min(0.5, 80 / total);
+		const a = old[index - 1] ?? 0;
+		const b = old[index] ?? 0;
+		const sum = a + b;
+		const left = Math.max(minRatio, Math.min(sum - minRatio, a + delta / total));
+		const ratios = [...old];
+		ratios[index - 1] = left;
+		ratios[index] = sum - left;
+		return ratios;
+	};
+	const startDrag = (e: React.PointerEvent<HTMLDivElement>, index: number): void => {
+		e.preventDefault();
+		const { px, total } = panePx();
+		if (px.length !== node.children.length || total <= 0) return;
+		e.currentTarget.setPointerCapture(e.pointerId);
+		dragRef.current = {
+			index,
+			start: row ? e.clientX : e.clientY,
+			old: px.map((p) => p / total),
+			row,
+			total,
+		};
+	};
+	const onPointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
+		const d = dragRef.current;
+		if (!d) return;
+		const current = d.row ? e.clientX : e.clientY;
+		const ratios = applyDelta(d.index, current - d.start, d.old, d.total);
+		if (ratios) setSplitRatios(node.id, ratios);
+	};
+	const endDrag = (): void => {
+		dragRef.current = null;
+	};
+	const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, index: number): void => {
+		const step = row
+			? e.key === "ArrowLeft"
+				? -1
+				: e.key === "ArrowRight"
+					? 1
+					: 0
+			: e.key === "ArrowUp"
+				? -1
+				: e.key === "ArrowDown"
+					? 1
+					: 0;
+		if (step === 0) return;
+		e.preventDefault();
+		const { px, total } = panePx();
+		if (px.length !== node.children.length || total <= 0) return;
+		const old = px.map((p) => p / total);
+		const ratios = applyDelta(index, (step * 10) / total, old, total);
+		if (ratios) setSplitRatios(node.id, ratios);
+	};
 	return (
-		<div className={`flex h-full min-h-0 w-full ${row ? "flex-row" : "flex-col"}`}>
+		<div ref={containerRef} className={`flex h-full min-h-0 w-full ${row ? "flex-row" : "flex-col"}`}>
 			{node.children.map((child, index) => (
 				<Fragment key={child.id}>
-					{index > 0 && <div className={`shrink-0 bg-border ${row ? "w-px" : "h-px"}`} />}
-					<div className="min-h-0 min-w-0 flex-1">
-						<TerminalSplitView node={child} groupId={groupId} />
+					{index > 0 && (
+						<div className={`relative z-10 flex shrink-0 items-center justify-center ${row ? "w-2" : "h-2"}`}>
+							<hr
+								tabIndex={0}
+								aria-orientation={row ? "vertical" : "horizontal"}
+								className={`absolute inset-0 h-full m-0 shrink-0 border-none bg-transparent ${
+									row ? "cursor-col-resize" : "cursor-row-resize"
+								} hover:bg-border`}
+								style={{ cursor: row ? "col-resize" : "row-resize" }}
+								onPointerDown={(e) => startDrag(e, index)}
+								onPointerMove={onPointerMove}
+								onPointerUp={endDrag}
+								onPointerCancel={endDrag}
+								onDoubleClick={() => setSplitRatios(node.id, undefined)}
+								onKeyDown={(e) => onKeyDown(e, index)}
+							/>
+							<div
+								aria-hidden="true"
+								className={`pointer-events-none m-0 shrink-0 bg-border ${row ? "h-full w-px" : "h-px w-full"}`}
+							/>
+						</div>
+					)}
+					<div
+						data-terminal-pane="true"
+						className="min-h-0 min-w-0 flex-1"
+						style={node.ratios ? { flexGrow: node.ratios[index] ?? 1, flexBasis: 0 } : undefined}
+					>
+						<TerminalSplitView node={child} groupId={groupId} focusHandles={focusHandles} />
 					</div>
 				</Fragment>
 			))}
@@ -80,6 +215,7 @@ function TabList(): React.JSX.Element | null {
 	const t = useT();
 	const groups = useTerminalStore((s) => s.groups);
 	const activeGroupId = useTerminalStore((s) => s.activeGroupId);
+	const activePaneId = useTerminalStore((s) => s.activePaneId);
 	if (groups.length === 0) return null;
 	return (
 		<div className="flex w-44 shrink-0 flex-col border-l border-border">
@@ -90,7 +226,8 @@ function TabList(): React.JSX.Element | null {
 						<Fragment key={group.id}>
 							{groupIndex > 0 && <div className="mx-2 my-1 h-px bg-border" />}
 							{entries.map(({ pane, tab }, index) => {
-								const active = group.id === activeGroupId && pane.activeTabId === tab.id;
+								const active =
+									group.id === activeGroupId && pane.id === activePaneId && pane.activeTabId === tab.id;
 								// 同组多实例：┌/├/└ 前缀连线（vscode group 内实例布局线）
 								const prefix =
 									entries.length > 1 ? (index === 0 ? "┌" : index === entries.length - 1 ? "└" : "├") : null;
@@ -187,8 +324,19 @@ export function TerminalDock(): React.JSX.Element {
 	const t = useT();
 	const groups = useTerminalStore((s) => s.groups);
 	const activeGroupId = useTerminalStore((s) => s.activeGroupId);
+	const activePaneId = useTerminalStore((s) => s.activePaneId);
 	const height = useTerminalStore((s) => s.height);
 	const maximized = useTerminalStore((s) => s.maximized);
+
+	// 全局焦点表（tabId → 终端句柄）：点右侧 tab 激活时由下方 effect 统一 focus（vscode 行为：点 tab 即聚焦终端）
+	const focusHandlesRef = useRef(new Map<number, TerminalViewHandle>());
+	const activeGroup = groups.find((g) => g.id === activeGroupId) ?? null;
+	const activePane = activeGroup ? activePaneOf(activeGroup.root, activePaneId) : null;
+	const activeTabId = activePane?.activeTabId;
+	useEffect(() => {
+		if (activeTabId == null) return;
+		focusHandlesRef.current.get(activeTabId)?.focus();
+	}, [activeTabId]);
 
 	// 初始高度对齐持久化偏好（拖拽时由 ui-preferences preview 同步，此处只在挂载兜底一次）
 	useEffect(() => {
@@ -272,7 +420,7 @@ export function TerminalDock(): React.JSX.Element {
 										: "absolute inset-0 invisible pointer-events-none"
 								}
 							>
-								<TerminalSplitView node={group.root} groupId={group.id} />
+								<TerminalSplitView node={group.root} groupId={group.id} focusHandles={focusHandlesRef} />
 							</div>
 						))
 					) : (

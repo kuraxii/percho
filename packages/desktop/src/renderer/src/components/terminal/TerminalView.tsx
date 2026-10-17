@@ -7,6 +7,7 @@ import { getPi } from "../../api";
 import { selectActiveCwd } from "../../lib/active-cwd";
 import { useSessionsStore } from "../../stores/sessions";
 import { useTerminalStore } from "../../stores/terminal";
+import { pushToast } from "../../stores/toasts";
 import { useThemeStore } from "../../stores/theme";
 import { useUiPreferencesStore } from "../../stores/ui-preferences";
 
@@ -181,8 +182,12 @@ export function TerminalView({
 		const unsubExit = pi.onTerminalExit(({ id, exitCode }) => {
 			if (id !== handleRef.current?.id) return;
 			handleRef.current = null;
-			useTerminalStore.getState().markTabExited(tabId);
-			terminal.write(`\r\n\x1b[90m[进程已退出，exit code ${exitCode}]\x1b[0m\r\n`);
+			// vscode 行为：进程退出（无论 code）即关闭终端实例——exit 0 无任何提示；
+			// 非 0 退出弹 toast 提示退出码（对齐 vscode 的 Error 通知，见 terminalInstance.ts _onProcessExit）
+			if (exitCode !== 0) {
+				pushToast("error", "terminal.exited", `exit code: ${exitCode}`);
+			}
+			useTerminalStore.getState().closeTab(tabId);
 		});
 
 		void pi
