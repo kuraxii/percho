@@ -7,8 +7,8 @@ import { getPi } from "../../api";
 import { selectActiveCwd } from "../../lib/active-cwd";
 import { useSessionsStore } from "../../stores/sessions";
 import { useTerminalStore } from "../../stores/terminal";
-import { pushToast } from "../../stores/toasts";
 import { useThemeStore } from "../../stores/theme";
+import { pushToast } from "../../stores/toasts";
 import { useUiPreferencesStore } from "../../stores/ui-preferences";
 
 /** vscode cursorStyle 枚举（block/line/bar）→ xterm cursorStyle（block/underline/bar）映射 */
