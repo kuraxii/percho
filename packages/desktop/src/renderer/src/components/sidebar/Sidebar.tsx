@@ -1,10 +1,11 @@
-import { type CSSProperties, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { selectActiveCwd } from "../../lib/active-cwd";
 import { deriveSidebarNavigation } from "../../lib/sidebar-groups";
 import { useEdgeFade } from "../../lib/use-edge-fade";
 import { useProjectsStore } from "../../stores/projects";
 import { useSessionsStore } from "../../stores/sessions";
+import { useTerminalStore } from "../../stores/terminal";
 import { useUiPreferencesStore } from "../../stores/ui-preferences";
 import { ProjectSection } from "./ProjectSection";
 import { SidebarFooter } from "./SidebarFooter";
@@ -29,6 +30,26 @@ export function Sidebar() {
 	const t = useT();
 	const collapsed = useUiPreferencesStore((s) => s.sidebarCollapsed);
 	const sidebarWidth = useUiPreferencesStore((s) => s.sidebarWidth);
+	const terminalMaximized = useTerminalStore((s) => s.maximized);
+	// 终端最大化退出：侧栏 60–340ms 软起步滑入（顶栏 0–160ms 下推进行中启动）。
+	// 状态机：hidden（最大化中，收起）→ restoring（退出，保持收起并锁定 280ms 时长）→
+	// expanding（60ms 后移除收起类开始滑入，软起步，时长仍 280ms）→ idle（340ms 后清理）。
+	const [terminalRestore, setTerminalRestore] = useState<"hidden" | "restoring" | "expanding" | "idle">(
+		"idle",
+	);
+	useEffect(() => {
+		if (terminalMaximized) {
+			setTerminalRestore("hidden");
+			return;
+		}
+		setTerminalRestore("restoring");
+		const t1 = window.setTimeout(() => setTerminalRestore("expanding"), 60);
+		const t2 = window.setTimeout(() => setTerminalRestore("idle"), 340);
+		return () => {
+			window.clearTimeout(t1);
+			window.clearTimeout(t2);
+		};
+	}, [terminalMaximized]);
 	const [resizing, setResizing] = useState(false);
 	const asideRef = useRef<HTMLElement>(null);
 	const renderWidth = useSidebarRenderWidth(sidebarWidth, asideRef);
@@ -86,7 +107,11 @@ export function Sidebar() {
 	return (
 		<aside
 			ref={asideRef}
-			className={`sidebar fade-rule-v ${collapsed ? "is-collapsed" : ""} ${resizing ? "is-resizing" : ""}`}
+			className={`sidebar fade-rule-v ${collapsed ? "is-collapsed" : ""} ${
+				terminalMaximized || terminalRestore === "restoring" ? "is-terminal-collapsed" : ""
+			} ${
+				terminalRestore === "restoring" || terminalRestore === "expanding" ? "is-terminal-restoring" : ""
+			} ${resizing ? "is-resizing" : ""}`}
 			style={{ "--sidebar-render-width": `${renderWidth}px` } as CSSProperties}
 			aria-label={t("sidebar.title")}
 			inert={collapsed}

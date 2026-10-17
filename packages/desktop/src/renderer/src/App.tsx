@@ -49,6 +49,7 @@ export default function App() {
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
 	// 内建终端面板开合（Ctrl+` 事件 + 关闭按钮共用；selector 收敛为原始值防级联渲染）
 	const terminalOpen = useTerminalStore((s) => s.open);
+	const terminalMaximized = useTerminalStore((s) => s.maximized);
 	// 子代理检视页才挂返回入口：无关系时连左上定位容器都不出现（不留占位）
 	const hasParentRelation = useHasParentRelation(activeSessionId);
 	/** Todo 槽位的 `display: contents` 宿主：CornerStack 靠它测量渲染根底边（插件原绝对定位不受影响） */
@@ -127,10 +128,22 @@ export default function App() {
 			<RegionHost region={UI_REGIONS.AppBackground} />
 			<div className="relative z-10 flex h-full flex-col">
 				{/* 顶栏常驻（v9）：它承担窗口拖动 / 左栏开合 / 变更侧栏入口，不再整条隐藏；
-				   设置里的开关只控制「是否显示置顶会话胶囊」（见 SessionTabBar） */}
-				<SessionTabBar />
-				<div className="relative flex min-h-0 flex-1">
-					<Sidebar />
+				   设置里的开关只控制「是否显示置顶会话胶囊」（见 SessionTabBar）。
+				   终端最大化时两阶段收起：先侧栏收（阶段 1），再顶栏收（阶段 2，delay 与终端动画同步）。 */}
+				<div
+					className={`shrink-0 overflow-hidden transition-[height,opacity] duration-300 ${
+						terminalMaximized ? "h-0 opacity-0" : "h-12"
+					}`}
+					style={terminalMaximized ? { transitionDelay: "150ms" } : { transitionDuration: "160ms" }}
+				>
+					<SessionTabBar />
+				</div>
+				<div className="relative flex min-h-0 flex-1 overflow-hidden">
+					{/* 终端最大化阶段 1：侧栏收起动画在 Sidebar 内部驱动（.sidebar transition width 0.4s + is-terminal-collapsed），
+					   wrapper 只裁剪，不设宽度（width:auto→0 不可插值会瞬间跳变）。 */}
+					<div className="shrink-0 overflow-hidden">
+						<Sidebar />
+					</div>
 					{/* 聊天页容器：会话推/出过渡的动画主体（lib/session-page-slide.ts 认 data-session-page 找它，
 					   用 data-session-id 判定「新内容已上屏」）。顶栏与左栏不在此容器内 ⇒ 导航时保持静态 */}
 					<div

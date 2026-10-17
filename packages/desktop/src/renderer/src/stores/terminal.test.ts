@@ -258,3 +258,76 @@ describe("split 比例（ratios，拖拽 divider 数据层）", () => {
 		void tabId;
 	});
 });
+
+describe("terminal 状态机（phase）", () => {
+	it("初始 closed；toggle 打开 → opening，非最大化不建组", () => {
+		useTerminalStore.setState({
+			open: false,
+			groups: [],
+			maximized: false,
+			phase: "closed",
+			maximizedBeforeHide: false,
+		});
+		useTerminalStore.getState().toggle();
+		const s = useTerminalStore.getState();
+		expect(s.phase).toBe("opening");
+		expect(s.open).toBe(true);
+	});
+
+	it("动画中（opening）toggle / setMaximized / setOpen / hide 全部拒绝", () => {
+		useTerminalStore.setState({ open: true, phase: "opening" });
+		const s0 = useTerminalStore.getState();
+		s0.toggle();
+		expect(useTerminalStore.getState().phase).toBe("opening");
+		useTerminalStore.getState().setMaximized(true);
+		expect(useTerminalStore.getState().phase).toBe("opening");
+		useTerminalStore.getState().setOpen(false);
+		expect(useTerminalStore.getState().phase).toBe("opening");
+		useTerminalStore.getState().hide();
+		expect(useTerminalStore.getState().phase).toBe("opening");
+		expect(useTerminalStore.getState().open).toBe(true);
+	});
+
+	it("open → setMaximized(true) → maximizing → setPhase(maximized)；再还原 restoring → open", () => {
+		useTerminalStore.setState({ open: true, phase: "open", maximized: false, maximizedBeforeHide: false });
+		useTerminalStore.getState().setMaximized(true);
+		expect(useTerminalStore.getState().phase).toBe("maximizing");
+		useTerminalStore.getState().setPhase("maximized");
+		expect(useTerminalStore.getState().maximized).toBe(true);
+		useTerminalStore.getState().setMaximized(false);
+		expect(useTerminalStore.getState().phase).toBe("restoring");
+		useTerminalStore.getState().setPhase("open");
+		expect(useTerminalStore.getState().phase).toBe("open");
+		expect(useTerminalStore.getState().open).toBe(true);
+	});
+
+	it("maximized 中 toggle 隐藏 → hiding + maximized:false + maximizedBeforeHide:true；恢复打开 → maximizing", () => {
+		useTerminalStore.setState({
+			open: true,
+			groups: [],
+			phase: "maximized",
+			maximized: true,
+			maximizedBeforeHide: false,
+		});
+		useTerminalStore.getState().toggle();
+		let s = useTerminalStore.getState();
+		expect(s.phase).toBe("hiding");
+		expect(s.maximized).toBe(false);
+		expect(s.maximizedBeforeHide).toBe(true);
+		// hiding 动画完成：TerminalDock 同一 set 卸载面板（open:false + phase:closed）
+		useTerminalStore.setState({ open: false, phase: "closed" });
+		useTerminalStore.getState().toggle();
+		s = useTerminalStore.getState();
+		expect(s.phase).toBe("maximizing"); // 隐藏前最大化：恢复最大化
+		expect(s.maximized).toBe(true);
+		expect(s.maximizedBeforeHide).toBe(false);
+	});
+
+	it("hiding 中 toggle 拒绝（状态机锁定）", () => {
+		useTerminalStore.setState({ open: true, phase: "hiding" });
+		const s0 = useTerminalStore.getState();
+		s0.toggle();
+		expect(useTerminalStore.getState().phase).toBe("hiding");
+		expect(useTerminalStore.getState().open).toBe(true);
+	});
+});

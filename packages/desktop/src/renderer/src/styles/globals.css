@@ -218,18 +218,16 @@
 	}
 }
 
-/* 终端面板：从底部滑入展开（vscode 式，高度撑开由布局自动让位，输入框被推到上方） */
-.terminal-slide-up {
-	animation: terminal-slide-up 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+/* 终端面板：挂载滑入（from height:0 强制播放——transition 需要已绘制起点，挂载首帧 0px 从未被绘制，故用 animation） */
+.terminal-slide-in {
+	animation: terminal-slide-in 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
-@keyframes terminal-slide-up {
+@keyframes terminal-slide-in {
 	from {
-		transform: translateY(28px);
-		opacity: 0;
+		height: 0;
 	}
 	to {
-		transform: translateY(0);
-		opacity: 1;
+		height: var(--terminal-dock-h, 288px);
 	}
 }
 
@@ -1499,6 +1497,29 @@ code {
 .sidebar.is-collapsed .sidebar-inner {
 	opacity: 0;
 	transform: translateX(-28px);
+}
+/* 终端最大化时收起侧栏：复用与点击折叠图标完全相同的过渡（width 0.4s + 内容层淡出左移），
+   由 TerminalDock 的 maximized 状态驱动（不写 store 的 sidebarCollapsed，避免持久化折叠）。 */
+.sidebar.is-terminal-collapsed {
+	width: 0;
+}
+.sidebar.is-terminal-collapsed::after {
+	display: none;
+}
+.sidebar.is-terminal-collapsed .sidebar-inner {
+	opacity: 0;
+	transform: translateX(-28px);
+}
+/* 终端退出侧栏滑入：100ms 启动、280ms 软起步（缓入缓出，ease-in-out）滑入（覆盖 .sidebar 默认 0.4s，仅作用于还原窗口期）。
+   内容层（sidebar-inner）同步 280ms 滑入淡出，与宽度/translateX 同拍。 */
+.sidebar.is-terminal-restoring {
+	transition-duration: 280ms;
+	transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+}
+.sidebar.is-terminal-restoring .sidebar-inner {
+	transition-duration: 280ms;
+	transition-delay: 0s;
+	transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
 }
 /* 分组展开/收起：grid 0fr→1fr 让未知高度（空态/任意行数的列表）共用一套动画，
    内层 overflow:hidden 只负责裁切；列表自己**不滚**（整条左栏只有一个外层滚动容器，v13 统一滚动）。 */
