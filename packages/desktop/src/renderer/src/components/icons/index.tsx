@@ -1,8 +1,12 @@
 /** 集中管理内联 SVG 图标：微调样式/尺寸只改这一处 */
 
+import type { CSSProperties } from "react";
+
 interface IconProps {
 	size?: number;
 	className?: string;
+	/** 内联样式（会话树折叠箭头的旋转过渡等） */
+	style?: CSSProperties;
 }
 
 const strokeProps = {
@@ -12,10 +16,11 @@ const strokeProps = {
 } as const;
 
 /** 信息包「i」：（Toast info glyph，ink-faint 近乎隐形） */
-export function InfoIcon({ size = 14, className }: IconProps) {
+export function InfoIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -31,10 +36,11 @@ export function InfoIcon({ size = 14, className }: IconProps) {
 }
 
 /** 铅笔（扩展输入卡 / 预填提示 glyph，设计稿 extension-dialogs 画板③⑩） */
-export function PencilIcon({ size = 14, className }: IconProps) {
+export function PencilIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -50,10 +56,11 @@ export function PencilIcon({ size = 14, className }: IconProps) {
 }
 
 /** 文档（扩展多行编辑卡 glyph，设计稿画板④） */
-export function FileTextIcon({ size = 14, className }: IconProps) {
+export function FileTextIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -71,10 +78,11 @@ export function FileTextIcon({ size = 14, className }: IconProps) {
 }
 
 /** 错误包「！」：（报错卡片 glyph，severity 着色由使用方 text-err/warn/info 控制） */
-export function ErrorCircleIcon({ size = 14, className }: IconProps) {
+export function ErrorCircleIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -90,10 +98,11 @@ export function ErrorCircleIcon({ size = 14, className }: IconProps) {
 }
 
 /** 盾牌（权限模式默认档 glyph） */
-export function ShieldIcon({ size = 14, className }: IconProps) {
+export function ShieldIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -108,10 +117,11 @@ export function ShieldIcon({ size = 14, className }: IconProps) {
 }
 
 /** 警告三角（权限模式 fullAccess 档 glyph，warn 色常驻提醒） */
-export function WarningIcon({ size = 14, className }: IconProps) {
+export function WarningIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -128,10 +138,11 @@ export function WarningIcon({ size = 14, className }: IconProps) {
 }
 
 /** 右箭头（错误卡展开 chevron） */
-export function ChevronRightIcon({ size = 12, className }: IconProps) {
+export function ChevronRightIcon({ size = 12, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -146,10 +157,11 @@ export function ChevronRightIcon({ size = 12, className }: IconProps) {
 }
 
 /** 复制（详情复制） */
-export function CopyIcon({ size = 12, className }: IconProps) {
+export function CopyIcon({ size = 12, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -165,10 +177,11 @@ export function CopyIcon({ size = 12, className }: IconProps) {
 }
 
 /** 复制（消息操作行，14px 完整形状；与详情复制 CopyIcon 路径不同，保持原样） */
-export function CopyActionIcon({ size = 14, className }: IconProps) {
+export function CopyActionIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -184,10 +197,11 @@ export function CopyActionIcon({ size = 14, className }: IconProps) {
 }
 
 /** 复制成功对勾（消息操作行复制态，14px，着色由使用方 text-green-500 控制） */
-export function CopyCheckIcon({ size = 14, className }: IconProps) {
+export function CopyCheckIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -202,10 +216,11 @@ export function CopyCheckIcon({ size = 14, className }: IconProps) {
 }
 
 /** 子代理（隔离会话 / 小机器人） */
-export function SubagentIcon({ size = 12, className }: IconProps) {
+export function SubagentIcon({ size = 12, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -221,10 +236,11 @@ export function SubagentIcon({ size = 12, className }: IconProps) {
 }
 
 /** 项目总览（顶栏切换项目管理页）：田字格（右上格为斜置方块）；设计稿 .local/design/icons/menu.svg */
-export function ProjectsIcon({ size = 15, className }: IconProps) {
+export function ProjectsIcon({ size = 15, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 1024 1024"
@@ -240,19 +256,28 @@ export function ProjectsIcon({ size = 15, className }: IconProps) {
 }
 
 /** 关闭/删除（×） */
-export function CloseIcon({ size = 10, className }: IconProps) {
+export function CloseIcon({ size = 10, className, style }: IconProps) {
 	return (
-		<svg className={className} width={size} height={size} viewBox="0 0 10 10" fill="none" aria-hidden="true">
+		<svg
+			className={className}
+			style={style}
+			width={size}
+			height={size}
+			viewBox="0 0 10 10"
+			fill="none"
+			aria-hidden="true"
+		>
 			<path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
 		</svg>
 	);
 }
 
 /** 日常空间标识：咖啡杯（闲聊/探索空间；白底黑字使用，与项目条目的黑底字母反相） */
-export function CoffeeIcon({ size = 14, className }: IconProps) {
+export function CoffeeIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -268,10 +293,11 @@ export function CoffeeIcon({ size = 14, className }: IconProps) {
 }
 
 /** codex 风格「新会话」编辑图标 */
-export function ComposeIcon({ size = 14, className }: IconProps) {
+export function ComposeIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -285,10 +311,11 @@ export function ComposeIcon({ size = 14, className }: IconProps) {
 }
 
 /** Diff 侧栏开关（右栏面板图形；字形占满 viewBox，与新会话铅笔视觉同尺寸） */
-export function DiffIcon({ size = 15, className }: IconProps) {
+export function DiffIcon({ size = 15, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -304,10 +331,11 @@ export function DiffIcon({ size = 15, className }: IconProps) {
 }
 
 /** 左侧栏开合（左栏面板图形；DiffIcon 的 x 镜像 —— 竖线 24−14.2=9.8，外框/描边/尺寸与相邻图标一致） */
-export function PanelLeftIcon({ size = 15, className }: IconProps) {
+export function PanelLeftIcon({ size = 15, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -323,10 +351,11 @@ export function PanelLeftIcon({ size = 15, className }: IconProps) {
 }
 
 /** 最大化（codicon screen-full，MIT vscode-codicons；vscode 面板/终端最大化图标） */
-export function MaximizeIcon({ size = 13, className }: IconProps) {
+export function MaximizeIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 16 16"
@@ -339,10 +368,11 @@ export function MaximizeIcon({ size = 13, className }: IconProps) {
 }
 
 /** 取消最大化/还原（codicon screen-normal，四角内凹；vscode 还原语义图标） */
-export function RestoreIcon({ size = 13, className }: IconProps) {
+export function RestoreIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 16 16"
@@ -355,10 +385,11 @@ export function RestoreIcon({ size = 13, className }: IconProps) {
 }
 
 /** 终端（codicon terminal，MIT vscode-codicons；官方 24x24 path） */
-export function TerminalIcon({ size = 16, className }: IconProps) {
+export function TerminalIcon({ size = 16, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -371,10 +402,11 @@ export function TerminalIcon({ size = 16, className }: IconProps) {
 }
 
 /** 加号（codicon add，MIT vscode-codicons） */
-export function PlusIcon({ size = 14, className }: IconProps) {
+export function PlusIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 16 16"
@@ -387,10 +419,11 @@ export function PlusIcon({ size = 14, className }: IconProps) {
 }
 
 /** 分屏（codicon split-horizontal，MIT vscode-codicons） */
-export function SplitIcon({ size = 13, className }: IconProps) {
+export function SplitIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 16 16"
@@ -403,10 +436,11 @@ export function SplitIcon({ size = 13, className }: IconProps) {
 }
 
 /** 清屏（codicon clear-all，MIT vscode-codicons） */
-export function ClearIcon({ size = 13, className }: IconProps) {
+export function ClearIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 16 16"
@@ -423,10 +457,11 @@ export function ClearIcon({ size = 13, className }: IconProps) {
 }
 
 /** 齿轮（设置） */
-export function GearIcon({ size = 14, className }: IconProps) {
+export function GearIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -442,10 +477,11 @@ export function GearIcon({ size = 14, className }: IconProps) {
 }
 
 /** 帮助（问号圆圈） */
-export function HelpIcon({ size = 14, className }: IconProps) {
+export function HelpIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -460,10 +496,11 @@ export function HelpIcon({ size = 14, className }: IconProps) {
 }
 
 /** 搜索放大镜 */
-export function SearchIcon({ size = 13, className }: IconProps) {
+export function SearchIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -477,19 +514,28 @@ export function SearchIcon({ size = 13, className }: IconProps) {
 }
 
 /** 发送（纸飞机） */
-export function SendIcon({ size = 12, className }: IconProps) {
+export function SendIcon({ size = 12, className, style }: IconProps) {
 	return (
-		<svg className={className} width={size} height={size} viewBox="0 0 12 12" fill="none" aria-hidden="true">
+		<svg
+			className={className}
+			style={style}
+			width={size}
+			height={size}
+			viewBox="0 0 12 12"
+			fill="none"
+			aria-hidden="true"
+		>
 			<path d="M2 1.5l8 4.5-8 4.5v-3.6l5-0.9-5-0.9z" fill="currentColor" />
 		</svg>
 	);
 }
 
 /** 发送（向上箭头，来自 assets/icons/up_arrow.svg） */
-export function ArrowUpIcon({ size = 14, className }: IconProps) {
+export function ArrowUpIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 1024 1024"
@@ -507,10 +553,11 @@ export function ArrowUpIcon({ size = 14, className }: IconProps) {
 }
 
 /** 撤销/取回（回卷箭头，描边镂空） */
-export function UndoIcon({ size = 14, className }: IconProps) {
+export function UndoIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -526,10 +573,11 @@ export function UndoIcon({ size = 14, className }: IconProps) {
 }
 
 /** 返回 / 上一级（左箭头）—— 设置二级页面的左上角入口 */
-export function ArrowLeftIcon({ size = 14, className }: IconProps) {
+export function ArrowLeftIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -546,10 +594,11 @@ export function ArrowLeftIcon({ size = 14, className }: IconProps) {
 }
 
 /** 停止（方块） */
-export function StopIcon({ size = 10, className }: IconProps) {
+export function StopIcon({ size = 10, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 10 10"
@@ -562,10 +611,11 @@ export function StopIcon({ size = 10, className }: IconProps) {
 }
 
 /** 下拉箭头（codicon chevron-down，MIT vscode-codicons） */
-export function ChevronDownIcon({ size = 10, className }: IconProps) {
+export function ChevronDownIcon({ size = 10, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 16 16"
@@ -578,10 +628,11 @@ export function ChevronDownIcon({ size = 10, className }: IconProps) {
 }
 
 /** 展开箭头（来自 assets/icons/expand.svg）：默认朝右，展开时 rotate-90 朝下 */
-export function ExpandArrowIcon({ size = 10, className }: IconProps) {
+export function ExpandArrowIcon({ size = 10, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 1024 1024"
@@ -594,9 +645,17 @@ export function ExpandArrowIcon({ size = 10, className }: IconProps) {
 }
 
 /** 勾选 */
-export function CheckIcon({ size = 12, className }: IconProps) {
+export function CheckIcon({ size = 12, className, style }: IconProps) {
 	return (
-		<svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+		<svg
+			className={className}
+			style={style}
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			fill="none"
+			aria-hidden="true"
+		>
 			<path
 				d="M20 6 9 17l-5-5"
 				stroke="currentColor"
@@ -609,18 +668,34 @@ export function CheckIcon({ size = 12, className }: IconProps) {
 }
 
 /** todo 待办：细线空心圆环（描边风，淡雅灰系由使用方 text-* 控制） */
-export function TodoPendingIcon({ size = 14, className }: IconProps) {
+export function TodoPendingIcon({ size = 14, className, style }: IconProps) {
 	return (
-		<svg className={className} width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+		<svg
+			className={className}
+			style={style}
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="none"
+			aria-hidden="true"
+		>
 			<circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
 		</svg>
 	);
 }
 
 /** todo 已完成：对勾描边绘制动画（todo-check-path 类见 globals.css，仅新挂载行触发） */
-export function TodoCompleteIcon({ size = 14, className }: IconProps) {
+export function TodoCompleteIcon({ size = 14, className, style }: IconProps) {
 	return (
-		<svg className={className} width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+		<svg
+			className={className}
+			style={style}
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="none"
+			aria-hidden="true"
+		>
 			<path
 				className="todo-check-path"
 				d="M3.5 8.5l3 3 6-7"
@@ -634,10 +709,11 @@ export function TodoCompleteIcon({ size = 14, className }: IconProps) {
 }
 
 /** todo 进行中：codicon loading 弧线（animate-spin 由使用方控制） */
-export function TodoSpinnerIcon({ size = 14, className }: IconProps) {
+export function TodoSpinnerIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 16 16"
@@ -650,10 +726,11 @@ export function TodoSpinnerIcon({ size = 14, className }: IconProps) {
 }
 
 /** 仪表盘（测试连接，外部下载 cesu.svg，1024 实心填充） */
-export function TestIcon({ size = 13, className }: IconProps) {
+export function TestIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 1024 1024"
@@ -666,10 +743,11 @@ export function TestIcon({ size = 13, className }: IconProps) {
 }
 
 /** 编辑框（配置/更新 Key，外部下载 edit.svg，1024 实心填充） */
-export function EditIcon({ size = 13, className }: IconProps) {
+export function EditIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 1024 1024"
@@ -683,10 +761,11 @@ export function EditIcon({ size = 13, className }: IconProps) {
 }
 
 /** 刷新（循环箭头，设置页联网刷新模型目录） */
-export function RefreshIcon({ size = 13, className }: IconProps) {
+export function RefreshIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -702,10 +781,11 @@ export function RefreshIcon({ size = 13, className }: IconProps) {
 }
 
 /** 垃圾桶（codicon trash，MIT vscode-codicons） */
-export function TrashIcon({ size = 13, className }: IconProps) {
+export function TrashIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 16 16"
@@ -718,10 +798,11 @@ export function TrashIcon({ size = 13, className }: IconProps) {
 }
 
 /** 文件夹（打开目录） */
-export function FolderIcon({ size = 13, className }: IconProps) {
+export function FolderIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -739,10 +820,11 @@ export function FolderIcon({ size = 13, className }: IconProps) {
  * 文件夹已展开（前盖外翻）：与 FolderIcon **同视盒 / 同线宽 / 同圆角**，只换内部结构。
  * 左栏项目行用它替换「展开变 chevron」——形状不再跳变，展开态仍是「文件夹」语义（v7 定稿）。
  */
-export function FolderOpenIcon({ size = 13, className }: IconProps) {
+export function FolderOpenIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -757,10 +839,11 @@ export function FolderOpenIcon({ size = 13, className }: IconProps) {
 }
 
 /** 下载（顶栏更新按钮 / 更新进度环内图标） */
-export function DownloadIcon({ size = 14, className }: IconProps) {
+export function DownloadIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -777,10 +860,11 @@ export function DownloadIcon({ size = 14, className }: IconProps) {
 }
 
 /** 分叉（assistant 消息操作行，外部下载 fork.svg，1024 实心填充；path 与 .local/design/icons/fork.svg 原件逐字符一致，strokeWidth 20 为加粗调整） */
-export function ForkIcon({ size = 16, className }: IconProps) {
+export function ForkIcon({ size = 16, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 1024 1024"
@@ -798,10 +882,11 @@ export function ForkIcon({ size = 16, className }: IconProps) {
 }
 
 /** 订阅登录（provider OAuth 入口，lucide log-in 风格） */
-export function LoginIcon({ size = 13, className }: IconProps) {
+export function LoginIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -818,10 +903,11 @@ export function LoginIcon({ size = 13, className }: IconProps) {
 }
 
 /** 时钟（轮末计时 glyph，lucide clock 风格） */
-export function ClockIcon({ size = 12, className }: IconProps) {
+export function ClockIcon({ size = 12, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -842,10 +928,11 @@ export function ClockIcon({ size = 12, className }: IconProps) {
  * v8 起四处共用这一枚（顶栏胶囊 11 / 左栏会话行 12 / 左栏项目行 12 / 菜单项 13）——
  * 旧的描边竖图钉在白底上区分度不够，置顶后看不出哪行被置顶。
  */
-export function PinIcon({ size = 12, className }: IconProps) {
+export function PinIcon({ size = 12, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 1024 1024"
@@ -858,10 +945,11 @@ export function PinIcon({ size = 12, className }: IconProps) {
 }
 
 /** 三点「更多」glyph（文件行 hover 浮出的右键菜单入口，设计稿 v2：18px 容器 + ink-faint） */
-export function MoreIcon({ size = 14, className }: IconProps) {
+export function MoreIcon({ size = 14, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 24 24"
@@ -876,10 +964,11 @@ export function MoreIcon({ size = 14, className }: IconProps) {
 }
 
 /** 频道（栅栏/井号）glyph：频道订阅胶囊用；13px、ink-faint */
-export function ChannelIcon({ size = 13, className }: IconProps) {
+export function ChannelIcon({ size = 13, className, style }: IconProps) {
 	return (
 		<svg
 			className={className}
+			style={style}
 			width={size}
 			height={size}
 			viewBox="0 0 20 20"

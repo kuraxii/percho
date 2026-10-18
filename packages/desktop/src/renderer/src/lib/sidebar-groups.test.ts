@@ -208,6 +208,96 @@ describe("deriveSidebarGroups · 血缘树形化", () => {
 		expect(alpha?.sessions.map((s) => s.session.sessionId)).toEqual(["b", "a"]);
 		expect(alpha?.sessions.map((s) => s.depth)).toEqual([0, 0]);
 	});
+
+	it("子会话计数只统计一层：subtreeCount = 直接子数（不含孙辈）", () => {
+		const root = fork("root", P1, 100);
+		const child = fork("child", P1, 200, root.sessionFile);
+		const grandchild = fork("grandchild", P1, 300, child.sessionFile);
+		const result = derive({ sessions: [root, child, grandchild], projects: [project(P1, 0)] });
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		const counts = new Map(
+			alpha?.sessions.map((s) => [s.session.sessionId, s.subtreeCount]) ?? [],
+		);
+		expect(counts.get("root")).toBe(1); // 直接子：child
+		expect(counts.get("child")).toBe(1); // 直接子：grandchild
+		expect(counts.get("grandchild")).toBe(0);
+	});
+
+	it("树形指引线：根无连接线（trunks 空 + elbow null），子行有（最后子竖线 17px，无子横线 24px）", () => {
+		const root = fork("root", P1, 100);
+		const last = fork("last", P1, 200, root.sessionFile);
+		const result = derive({ sessions: [root, last], projects: [project(P1, 0)] });
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		const rows = alpha?.sessions ?? [];
+		expect(rows.find((r) => r.session.sessionId === "root")?.guide).toEqual({ trunks: [], elbow: null });
+		const lastGuide = rows.find((r) => r.session.sessionId === "last")?.guide;
+		// 本层竖线 last→17px（渲染层画 height:18） + 无子横线 24px
+		expect(lastGuide).toEqual({ trunks: [], elbow: { x: 22, last: true, arm: 24 } });
+		expect(rows.find((r) => r.session.sessionId === "last")?.isLast).toBe(true);
+	});
+
+	it("多子指引线：非最后子竖线贯穿（elbow.last=false），最后子不贯穿（elbow.last=true）", () => {
+		const root = fork("root", P1, 100);
+		const a = fork("a", P1, 200, root.sessionFile);
+		const b = fork("b", P1, 300, root.sessionFile);
+		const result = derive({ sessions: [root, a, b], projects: [project(P1, 0)] });
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		const rows = alpha?.sessions ?? [];
+		// 子按活动倒序：b 在前（非最后子），a 在后（最后子）
+		const guideA = rows.find((r) => r.session.sessionId === "a")?.guide;
+		const guideB = rows.find((r) => r.session.sessionId === "b")?.guide;
+		expect(guideB?.elbow).toEqual({ x: 22, last: false, arm: 24 });
+		expect(guideA?.elbow).toEqual({ x: 22, last: true, arm: 24 });
+		expect(rows.find((r) => r.session.sessionId === "a")?.isLast).toBe(true);
+		expect(rows.find((r) => r.session.sessionId === "b")?.isLast).toBe(false);
+		// 设计稿：根（d=0）不往 cont 加标志——第一层子的 ancestorGuides 恒为空
+		expect(rows.find((r) => r.session.sessionId === "b")?.ancestorGuides).toEqual([]);
+		expect(rows.find((r) => r.session.sessionId === "a")?.ancestorGuides).toEqual([]);
+	});
+
+	it("孙辈祖先竖线：由父（第一层子）是否有后续兄弟决定，而非根（设计稿 cont 语义）", () => {
+		const root = fork("root", P1, 100);
+		const a = fork("a", P1, 500, root.sessionFile); // a 活动最新 → 排在 b 前（非最后子）
+		const b = fork("b", P1, 300, root.sessionFile); // b 在后（最后子）
+		const a1 = fork("a1", P1, 400, a.sessionFile);
+		const a2 = fork("a2", P1, 450, a.sessionFile);
+		const result = derive({ sessions: [root, a, b, a1, a2], projects: [project(P1, 0)] });
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		const rows = alpha?.sessions ?? [];
+		// 按活动倒序：a2（450）在前 → 非最后子；a1（400）在后 → 最后子
+		const a1Guide = rows.find((r) => r.session.sessionId === "a1")?.guide;
+		const a2Guide = rows.find((r) => r.session.sessionId === "a2")?.guide;
+		// a 不是最后子（b 在后）→ 根级竖线（x=22px）贯穿 a 的子孙行
+		expect(a1Guide?.trunks).toEqual([22]);
+		expect(a2Guide?.trunks).toEqual([22]);
+		// a1（最后子）本层竖线只到 17px；a2（非最后子）贯穿
+		expect(a1Guide?.elbow).toEqual({ x: 38, last: true, arm: 24 });
+		expect(a2Guide?.elbow).toEqual({ x: 38, last: false, arm: 24 });
+		// b 是 root 最后子 → b 行本层竖线 17px
+		expect(rows.find((r) => r.session.sessionId === "b")?.guide?.elbow).toEqual({
+			x: 22,
+			last: true,
+			arm: 24,
+		});
+	});
+
+	it("孙辈祖先竖线不穿透：父是最后子时，根级竖线在该行断开（该断则断）", () => {
+		const root = fork("root", P1, 100);
+		const only = fork("only", P1, 200, root.sessionFile);
+		const g1 = fork("g1", P1, 300, only.sessionFile);
+		const g2 = fork("g2", P1, 400, only.sessionFile);
+		const result = derive({ sessions: [root, only, g1, g2], projects: [project(P1, 0)] });
+		const alpha = result.projects.find((p) => p.cwd === P1);
+		const rows = alpha?.sessions ?? [];
+		// root 唯一子 only（最后子）→ 孙辈行的根级竖线（x=22px）不应出现：
+		const g1Guide = rows.find((r) => r.session.sessionId === "g1")?.guide;
+		const g2Guide = rows.find((r) => r.session.sessionId === "g2")?.guide;
+		expect(g1Guide?.trunks).toEqual([]);
+		expect(g2Guide?.trunks).toEqual([]);
+		// 本层（only 级 x=38px）：g1（最后子）17px，g2（非最后子）贯穿
+		expect(g1Guide?.elbow).toEqual({ x: 38, last: true, arm: 24 });
+		expect(g2Guide?.elbow).toEqual({ x: 38, last: false, arm: 24 });
+	});
 });
 
 describe("deriveSidebarGroups · 项目区排序", () => {

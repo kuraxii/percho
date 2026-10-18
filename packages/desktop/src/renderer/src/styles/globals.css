@@ -14,6 +14,8 @@
 	--color-border-strong: var(--color-border-strong);
 	--color-bubble: var(--color-bubble);
 	--color-user-bubble: var(--color-user-bubble);
+	/* 会话树形指引线（设计稿 #DAD6CB）：浅色主题用设计稿暖灰；深色主题回落 border 色 */
+	--color-tree-line: var(--color-tree-line);
 	--color-ink: var(--color-ink);
 	--color-ink-2: var(--color-ink-2);
 	--color-ink-dim: var(--color-ink-dim);
@@ -42,6 +44,8 @@
 	--color-hover: #f4f4f5;
 	--color-border: #e2e8f0;
 	--color-border-strong: #cbd5e1;
+	/* 会话树形指引线：设计稿精确色（暖灰 #DAD6CB） */
+	--color-tree-line: #dad6cb;
 	/* 用户气泡底色：原 border（zinc-200 #e4e4e7）的变浅版，中性灰不带冷调 */
 	--color-bubble: #f0f0f2;
 	--color-user-bubble: var(--color-bubble);
@@ -105,6 +109,8 @@
 	--color-hover: #2b2b31;
 	--color-border: #38383f;
 	--color-border-strong: #4b4b53;
+	/* 会话树形指引线：深色主题不透明固定值（不回落 border——线段上下 1px 重叠，半透明会出现深色斑点） */
+	--color-tree-line: #38383f;
 	--color-bubble: #38383f;
 	--color-user-bubble: var(--color-bubble);
 	--color-ink: #e6e6ea;

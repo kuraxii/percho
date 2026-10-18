@@ -26,6 +26,14 @@ export type SidebarSession = {
 	hasChildren?: boolean;
 	/** 当前子树是否收起：收起 → 子树行不渲染（仅非置顶树内） */
 	collapsed?: boolean;
+	/** 子树全部后代数（含孙辈），预计算（设计稿「+N」徽章：有子且折叠时显示） */
+	subtreeCount?: number;
+	/** 本行是父的最后一个子（树形指引线：本层竖线只画到箭头处） */
+	isLast?: boolean;
+	/** 每级祖先是否还有后续兄弟（竖线贯穿该级），[j] = 深度 j 的祖先 */
+	ancestorGuides?: boolean[];
+	/** 树形指引线结构化描述（trunks 祖先贯穿竖线 + elbow 本层连接线；置顶平铺行不设） */
+	guide?: RowGuide;
 };
 
 /** 一个可折叠分组（日常空间与每个项目同构，渲染侧共用一套行组件） */
@@ -152,6 +160,35 @@ function matchesSearch(session: SessionMeta, query: string): boolean {
 const EMPTY_SET: ReadonlySet<string> = new Set();
 
 /**
+ * 行树形指引线的结构化描述（取代 CSS background 串——渲染层用真实 DOM 线段绘制，
+ * 可上下各延伸 1px 盖住相邻行接缝；z 层压在行高亮底色之上）：
+ * - `trunks`：祖先层仍需贯穿的竖线 x（px，容器内左缘）；每行各自渲染，靠行首尾相接连成整条
+ * - `elbow`：本层连接线（竖线 + 横线）；null = 根行（depth 0，无线）
+ *   - `x`：竖线 x；`last`：最后子（竖线只画到箭头处 17px 而非贯穿）；`arm`：横线长（有子 6 / 无子 24）
+ */
+export interface RowGuide {
+	trunks: number[];
+	elbow: null | { x: number; last: boolean; arm: number };
+}
+
+/** 设计稿公式：祖先竖线 x=6+j*16（j=1..d-1，anc[j-1] 为真才画）；本层竖线 x=6+d*16，横线 y=16px */
+export function buildGuide(
+	depth: number,
+	ancestors: readonly boolean[],
+	isLast: boolean,
+	hasChildren: boolean,
+): RowGuide {
+	const trunks: number[] = [];
+	for (let j = 1; j < depth; j++) {
+		if (ancestors[j - 1]) trunks.push(6 + j * 16);
+	}
+	return {
+		trunks,
+		elbow: depth > 0 ? { x: 6 + depth * 16, last: isLast, arm: hasChildren ? 6 : 24 } : null,
+	};
+}
+
+/**
  * 会话血缘树形化（纯函数）：把一组会话按 `parentSessionPath` 聚成森林，再展平成带 `depth`
  * 的渲染序列（供 `SessionRow` 缩进 + 父连线）。规则：
  *
@@ -163,13 +200,28 @@ const EMPTY_SET: ReadonlySet<string> = new Set();
  *
  * 折叠：`collapsed` 里的父 sessionId 收起其子树（节点本身保留、深度不变、子行不输出）；
  * `forceExpand` 里的 id 即使被折叠也强制展开（搜索命中祖先链），两者交集以 forceExpand 为准。
+ *
+ * 每行附带树形渲染所需的血缘信息（设计稿「会话树侧栏」）：
+ * - `subtreeCount`：直接子会话数（只统计一层，用户要求；visit 里 children 已就绪，无需预计算 Map）
+ * - `isLast`：本行是父的最后一个子（本层竖线只画到箭头处，不贯穿）
+ * - `ancestorGuides`：每级祖先是否「还有后续兄弟」（竖线需贯穿该级），`[j]` = 深度 j 的祖先
+ * - `guide`：行树形指引线的结构化描述（`RowGuide`，渲染层画真实线段；深色回落色不透明，见 globals.css --color-tree-line）
  */
 function buildSessionForest(
 	list: readonly SessionMeta[],
 	collapsed: ReadonlySet<string> = EMPTY_SET,
 	forceExpand: ReadonlySet<string> = EMPTY_SET,
 	searching = false,
-): { session: SessionMeta; depth: number; hasChildren: boolean; collapsed: boolean }[] {
+): {
+	session: SessionMeta;
+	depth: number;
+	hasChildren: boolean;
+	collapsed: boolean;
+	subtreeCount: number;
+	isLast: boolean;
+	ancestorGuides: boolean[];
+	guide: RowGuide;
+}[] {
 	const byPath = new Map<string, SessionMeta[]>();
 	const roots: SessionMeta[] = [];
 	const bySessionFile = new Map(list.map((session) => [session.sessionFile, session]));
@@ -206,16 +258,47 @@ function buildSessionForest(
 	}
 	for (const siblings of byPath.values()) siblings.sort(byActivity);
 
-	const rows: { session: SessionMeta; depth: number; hasChildren: boolean; collapsed: boolean }[] = [];
-	const visit = (session: SessionMeta, depth: number) => {
+	const rows: {
+		session: SessionMeta;
+		depth: number;
+		hasChildren: boolean;
+		collapsed: boolean;
+		subtreeCount: number;
+		isLast: boolean;
+		ancestorGuides: boolean[];
+		guide: RowGuide;
+	}[] = [];
+
+	// 行 wrap 左缩进：设计稿 x0 = 14 + depth*16（每级 16px），guide 竖线 x = 6 + depth*16
+	const visit = (session: SessionMeta, depth: number, ancestorGuides: boolean[], isLast: boolean) => {
 		const children = byPath.get(session.sessionId) ?? [];
 		const isCollapsed =
 			children.length > 0 && collapsed.has(session.sessionId) && !forceExpand.has(session.sessionId);
-		rows.push({ session, depth, hasChildren: children.length > 0, collapsed: isCollapsed });
+		const lastIndex = children.length - 1;
+		const row = {
+			session,
+			depth,
+			hasChildren: children.length > 0,
+			collapsed: isCollapsed,
+			subtreeCount: children.length,
+			isLast,
+			ancestorGuides: [...ancestorGuides],
+			guide: buildGuide(depth, ancestorGuides, isLast, children.length > 0),
+		};
+		rows.push(row);
 		if (isCollapsed) return;
-		for (const child of children) visit(child, depth + 1);
+		children.forEach((child, index) => {
+			// 设计稿 walk：`d>0 ? cont.concat(!last) : cont`——cont 追加的是**当前节点**是否最后子
+			// （子行用它判断「父级祖先竖线」是否贯穿），且根（d=0）不追加，否则深度≥2 行会错位
+			visit(
+				child,
+				depth + 1,
+				depth > 0 ? ancestorGuides.concat(!isLast) : ancestorGuides,
+				index === lastIndex,
+			);
+		});
 	};
-	for (const root of roots) visit(root, 0);
+	for (const root of roots) visit(root, 0, [], true);
 	return rows;
 }
 
@@ -267,6 +350,10 @@ function groupSessions(
 			depth: row.depth,
 			hasChildren: row.hasChildren,
 			collapsed: row.collapsed,
+			subtreeCount: row.subtreeCount,
+			isLast: row.isLast,
+			ancestorGuides: row.ancestorGuides,
+			guide: row.guide,
 		})),
 	];
 }
