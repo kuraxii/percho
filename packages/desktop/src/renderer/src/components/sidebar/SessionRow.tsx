@@ -48,40 +48,54 @@ export function SessionRow({
 	const status = useSessionStatus(session.sessionId);
 	const title = sessionTitle(session, t("projects.untitled"), t("projects.daily"));
 	return (
-		<button
-			type="button"
-			// 可测试性只读属性（spec §6：CDP 按 sessionId 定位行，而不是靠标题文本匹配；纯属性，不影响视觉/交互）
-			data-session-id={session.sessionId}
-			data-session-active={active ? "true" : "false"}
-			className={`relative flex h-[31px] w-full items-center gap-2 rounded-[7px] px-1.5 text-left text-ui-135 ${
-				active ? "bg-bubble font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink"
-			}`}
-			style={depth > 0 ? { paddingLeft: 6 + depth * 14 } : undefined}
-			onClick={onSelect}
-			onContextMenu={
-				onContextMenu
-					? (e: ReactMouseEvent<HTMLButtonElement>) => {
-							e.preventDefault();
-							// 锚点 = 指针位置（与悬浮面板行一致的 "在指针处弹出" 语言），零尺寸矩形只用于避让
-							onContextMenu({ left: e.clientX, top: e.clientY, width: 0, height: 0 });
-						}
-					: undefined
-			}
-		>
-			{/* 血缘父连线：从父图标槽中心垂直穿过子行（深度 1 时对齐根行图标中心） */}
-			{depth > 0 && (
-				<span
-					aria-hidden="true"
-					className="absolute top-0 h-full w-px bg-ink-faint/25"
-					style={{ left: 14 + (depth - 1) * 14 }}
-				/>
-			)}
-			{/* 图标槽：有子 → 折叠箭头（点击不触发开会话）；置顶才放图钉；不带时占位不空转（标题 x 恒定） */}
-			{hasChildren ? (
+		<div className="relative">
+			<button
+				type="button"
+				// 可测试性只读属性（spec §6：CDP 按 sessionId 定位行，而不是靠标题文本匹配；纯属性，不影响视觉/交互）
+				data-session-id={session.sessionId}
+				data-session-active={active ? "true" : "false"}
+				className={`relative flex h-[31px] w-full items-center gap-2 rounded-[7px] px-1.5 text-left text-ui-135 ${
+					active ? "bg-bubble font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink"
+				}`}
+				style={depth > 0 ? { paddingLeft: 6 + depth * 14 } : undefined}
+				onClick={onSelect}
+				onContextMenu={
+					onContextMenu
+						? (e: ReactMouseEvent<HTMLButtonElement>) => {
+								e.preventDefault();
+								// 锚点 = 指针位置（与悬浮面板行一致的 "在指针处弹出" 语言），零尺寸矩形只用于避让
+								onContextMenu({ left: e.clientX, top: e.clientY, width: 0, height: 0 });
+							}
+						: undefined
+				}
+			>
+				{/* 血缘父连线：从父图标槽中心垂直穿过子行（深度 1 时对齐根行图标中心） */}
+				{depth > 0 && (
+					<span
+						aria-hidden="true"
+						className="absolute top-0 h-full w-px bg-ink-faint/25"
+						style={{ left: 14 + (depth - 1) * 14 }}
+					/>
+				)}
+				{/* 图标槽：无箭头时放图钉，有箭头时留空占位（标题 x 恒定） */}
+				<span className="grid h-4 w-4 shrink-0 place-items-center text-ink-faint" aria-hidden="true">
+					{pinned && !hasChildren && <PinIcon size={12} />}
+				</span>
+				<span className="min-w-0 flex-1 truncate">{title}</span>
+				{status !== "idle" && (
+					<span
+						className={`mr-0.5 h-[7px] w-[7px] shrink-0 rounded-full ${DOT_CLASS[status]}`}
+						aria-hidden="true"
+					/>
+				)}
+			</button>
+			{/* 折叠箭头：行的兄弟节点（绝对定位浮在图标槽上），与 ProjectRow 行末按钮同惯例——避免 button 套 button */}
+			{hasChildren && (
 				<button
 					type="button"
 					aria-label={collapsed ? t("sidebar.expandNode") : t("sidebar.collapseNode")}
-					className="grid h-4 w-4 shrink-0 place-items-center rounded text-ink-faint transition-colors hover:text-ink-2"
+					className="absolute top-1/2 grid h-4 w-4 -translate-y-1/2 place-items-center rounded text-ink-faint transition-colors hover:text-ink-2"
+					style={{ left: 6 + depth * 14 }}
 					onClick={(event) => {
 						event.stopPropagation();
 						onToggleCollapse?.();
@@ -89,18 +103,7 @@ export function SessionRow({
 				>
 					{collapsed ? <ChevronRightIcon size={10} /> : <ChevronDownIcon size={10} />}
 				</button>
-			) : (
-				<span className="grid h-4 w-4 shrink-0 place-items-center text-ink-faint" aria-hidden="true">
-					{pinned && <PinIcon size={12} />}
-				</span>
 			)}
-			<span className="min-w-0 flex-1 truncate">{title}</span>
-			{status !== "idle" && (
-				<span
-					className={`mr-0.5 h-[7px] w-[7px] shrink-0 rounded-full ${DOT_CLASS[status]}`}
-					aria-hidden="true"
-				/>
-			)}
-		</button>
+		</div>
 	);
 }
