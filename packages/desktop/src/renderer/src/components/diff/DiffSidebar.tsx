@@ -102,6 +102,7 @@ export function DiffSidebar() {
 	const open = useUiStore((s) => s.diffSidebarOpen);
 	const setOpen = useUiStore((s) => s.setDiffSidebarOpen);
 	const diffSidebarWidth = useUiStore((s) => s.diffSidebarWidth);
+	const sidebarWidth = useUiPreferencesStore((s) => s.sidebarWidth);
 	const diffFocus = useUiStore((s) => s.diffFocus);
 	const clearDiffFocus = useUiStore((s) => s.clearDiffFocus);
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
@@ -179,7 +180,7 @@ export function DiffSidebar() {
 	return (
 		<aside
 			className={`diff-sidebar${open ? " open" : ""}`}
-			style={{ width: `min(${diffSidebarWidth}px, 38vw)` }}
+			style={{ width: `min(${diffSidebarWidth}px, calc(100vw - ${sidebarWidth}px))` }}
 			aria-hidden={!open}
 			inert={!open}
 		>
