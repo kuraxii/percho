@@ -134,11 +134,9 @@ export default function App() {
 					<SessionTabBar />
 				</div>
 				<div className="relative flex min-h-0 flex-1 overflow-hidden">
-					{/* 终端最大化阶段 1：侧栏收起动画在 Sidebar 内部驱动（.sidebar transition width 0.4s + is-terminal-collapsed），
-					   wrapper 只裁剪，不设宽度（width:auto→0 不可插值会瞬间跳变）。 */}
-					<div className="shrink-0 overflow-hidden">
-						<Sidebar />
-					</div>
+					{/* 侧栏直接作为 flex 子项（bf58bb0 之前的布局）：被默认 stretch 拉满高，resize 把手满高可拖。
+					   终端最大化时靠 .sidebar.is-terminal-collapsed（width:0）自身收起（瞬变，8735f18 无动画）。 */}
+					<Sidebar />
 					{/* 聊天页容器：会话推/出过渡的动画主体（lib/session-page-slide.ts 认 data-session-page 找它，
 					   用 data-session-id 判定「新内容已上屏」）。顶栏与左栏不在此容器内 ⇒ 导航时保持静态 */}
 					<div
