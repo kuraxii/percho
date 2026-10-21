@@ -129,13 +129,8 @@ export default function App() {
 			<div className="relative z-10 flex h-full flex-col">
 				{/* 顶栏常驻（v9）：它承担窗口拖动 / 左栏开合 / 变更侧栏入口，不再整条隐藏；
 				   设置里的开关只控制「是否显示置顶会话胶囊」（见 SessionTabBar）。
-				   终端最大化时两阶段收起：先侧栏收（阶段 1），再顶栏收（阶段 2，delay 与终端动画同步）。 */}
-				<div
-					className={`shrink-0 overflow-hidden transition-[height,opacity] duration-300 ${
-						terminalMaximized ? "h-0 opacity-0" : "h-12"
-					}`}
-					style={terminalMaximized ? { transitionDelay: "150ms" } : { transitionDuration: "160ms" }}
-				>
+				   终端最大化时直接收起（无动画）：瞬变。 */}
+				<div className={`shrink-0 overflow-hidden ${terminalMaximized ? "h-0 opacity-0" : "h-12"}`}>
 					<SessionTabBar />
 				</div>
 				<div className="relative flex min-h-0 flex-1 overflow-hidden">

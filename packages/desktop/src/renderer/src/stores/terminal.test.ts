@@ -259,75 +259,65 @@ describe("split 比例（ratios，拖拽 divider 数据层）", () => {
 	});
 });
 
-describe("terminal 状态机（phase）", () => {
-	it("初始 closed；toggle 打开 → opening，非最大化不建组", () => {
+describe("terminal 开合与最大化（无动画）", () => {
+	it("初始 closed；toggle 打开 → open（首次建一个 shell）", () => {
 		useTerminalStore.setState({
 			open: false,
 			groups: [],
 			maximized: false,
-			phase: "closed",
 			maximizedBeforeHide: false,
 		});
 		useTerminalStore.getState().toggle();
 		const s = useTerminalStore.getState();
-		expect(s.phase).toBe("opening");
 		expect(s.open).toBe(true);
+		expect(s.groups.length).toBe(1);
 	});
 
-	it("动画中（opening）toggle / setMaximized / setOpen / hide 全部拒绝", () => {
-		useTerminalStore.setState({ open: true, phase: "opening" });
+	it("toggle / setMaximized / setOpen / hide 无动画锁，直接生效", () => {
+		useTerminalStore.setState({ open: true, groups: [], maximized: false });
 		const s0 = useTerminalStore.getState();
 		s0.toggle();
-		expect(useTerminalStore.getState().phase).toBe("opening");
+		expect(useTerminalStore.getState().open).toBe(false);
+		useTerminalStore.setState({ open: true });
 		useTerminalStore.getState().setMaximized(true);
-		expect(useTerminalStore.getState().phase).toBe("opening");
-		useTerminalStore.getState().setOpen(false);
-		expect(useTerminalStore.getState().phase).toBe("opening");
-		useTerminalStore.getState().hide();
-		expect(useTerminalStore.getState().phase).toBe("opening");
-		expect(useTerminalStore.getState().open).toBe(true);
-	});
-
-	it("open → setMaximized(true) → maximizing → setPhase(maximized)；再还原 restoring → open", () => {
-		useTerminalStore.setState({ open: true, phase: "open", maximized: false, maximizedBeforeHide: false });
-		useTerminalStore.getState().setMaximized(true);
-		expect(useTerminalStore.getState().phase).toBe("maximizing");
-		useTerminalStore.getState().setPhase("maximized");
 		expect(useTerminalStore.getState().maximized).toBe(true);
 		useTerminalStore.getState().setMaximized(false);
-		expect(useTerminalStore.getState().phase).toBe("restoring");
-		useTerminalStore.getState().setPhase("open");
-		expect(useTerminalStore.getState().phase).toBe("open");
+		expect(useTerminalStore.getState().maximized).toBe(false);
+		useTerminalStore.getState().hide();
+		expect(useTerminalStore.getState().open).toBe(false);
+	});
+
+	it("open → setMaximized(true) → maximized；还原 maximized:false", () => {
+		useTerminalStore.setState({ open: true, maximized: false, maximizedBeforeHide: false });
+		useTerminalStore.getState().setMaximized(true);
+		expect(useTerminalStore.getState().maximized).toBe(true);
+		useTerminalStore.getState().setMaximized(false);
+		expect(useTerminalStore.getState().maximized).toBe(false);
 		expect(useTerminalStore.getState().open).toBe(true);
 	});
 
-	it("maximized 中 toggle 隐藏 → hiding + maximized:false + maximizedBeforeHide:true；恢复打开 → maximizing", () => {
+	it("maximized 中 toggle 隐藏 → open:false + maximized:false + maximizedBeforeHide:true；恢复打开 → 恢复最大化", () => {
 		useTerminalStore.setState({
 			open: true,
 			groups: [],
-			phase: "maximized",
 			maximized: true,
 			maximizedBeforeHide: false,
 		});
 		useTerminalStore.getState().toggle();
 		let s = useTerminalStore.getState();
-		expect(s.phase).toBe("hiding");
+		expect(s.open).toBe(false);
 		expect(s.maximized).toBe(false);
 		expect(s.maximizedBeforeHide).toBe(true);
-		// hiding 动画完成：TerminalDock 同一 set 卸载面板（open:false + phase:closed）
-		useTerminalStore.setState({ open: false, phase: "closed" });
 		useTerminalStore.getState().toggle();
 		s = useTerminalStore.getState();
-		expect(s.phase).toBe("maximizing"); // 隐藏前最大化：恢复最大化
-		expect(s.maximized).toBe(true);
+		expect(s.open).toBe(true);
+		expect(s.maximized).toBe(true); // 隐藏前最大化：恢复最大化
 		expect(s.maximizedBeforeHide).toBe(false);
 	});
 
-	it("hiding 中 toggle 拒绝（状态机锁定）", () => {
-		useTerminalStore.setState({ open: true, phase: "hiding" });
-		const s0 = useTerminalStore.getState();
-		s0.toggle();
-		expect(useTerminalStore.getState().phase).toBe("hiding");
-		expect(useTerminalStore.getState().open).toBe(true);
+	it("hide：最大化时退出最大化并记住恢复状态，否则直接关闭", () => {
+		useTerminalStore.setState({ open: true, maximized: false });
+		useTerminalStore.getState().hide();
+		expect(useTerminalStore.getState().open).toBe(false);
 	});
 });

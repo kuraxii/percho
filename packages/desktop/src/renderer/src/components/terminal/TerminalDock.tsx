@@ -1,4 +1,4 @@
-import { Fragment, type KeyboardEvent, type PointerEvent, useEffect, useRef, useState } from "react";
+import { Fragment, type KeyboardEvent, type PointerEvent, useEffect, useRef } from "react";
 import { useT } from "../../i18n";
 import {
 	activePaneOf,
@@ -333,93 +333,6 @@ export function TerminalDock(): React.JSX.Element {
 	const height = useTerminalStore((s) => s.height);
 	const maximized = useTerminalStore((s) => s.maximized);
 
-	// 最大化两阶段动画（Gemini 方案 flow 式）：终端高度数值过渡（flex 弹性模型接管宽度，不写宽度动画）。
-	// 阶段 1（0.30s 减速）：终端从 dock 高度升到中间区全高（贴顶栏底）；侧栏同步收拢，聊天页被挤出。
-	// 阶段 2（0.20s 加速，150ms 后启动）：顶栏收（App 侧同 delay）后中间区膨胀，终端再升到全视口高。
-	// 退出动量时序：终端 0–300ms 单曲线下沉（无分段）；顶栏 0–160ms 下推（上限=终端顶边）；
-	// 侧栏 160–340ms 滑入（translateX，左边缘派生）。
-	const [animH, setAnimH] = useState<number | null>(null);
-	const [animEase, setAnimEase] = useState<string | undefined>(undefined);
-	// 终端面板状态机（store 层驱动，见 stores/terminal.ts TerminalPhase）：
-	// opening / maximizing / restoring / hiding 动画期间 store 拒绝一切其他转换（toggle/hide/setMaximized/setOpen），
-	// 这里由单一 effect 按 phase 驱动对应动画，并在完成时推进到下一静止态。
-	const phase = useTerminalStore((s) => s.phase);
-	const setPhase = useTerminalStore((s) => s.setPhase);
-	useEffect(() => {
-		switch (phase) {
-			case "opening": {
-				// 挂载滑入：CSS animation 关键帧（from height:0 → var(--terminal-dock-h)）由浏览器强制播放，
-				// 不依赖 transition 起点（挂载首帧 0px 从未被实际绘制，transition 无起点会瞬间跳变）。
-				const t = window.setTimeout(() => setPhase("open"), 300);
-				return () => window.clearTimeout(t);
-			}
-			case "maximizing": {
-				// 阶段 1（0.30s 减速）：dock 高 → 中间区全高（贴顶栏底）；阶段 2（0.20s 加速，150ms 后）：顶栏收后全视口高
-				setAnimEase("height 300ms cubic-bezier(0.4, 0, 0.2, 1)");
-				setAnimH(window.innerHeight - 48);
-				const t2 = window.setTimeout(() => {
-					setAnimEase("height 200ms cubic-bezier(0, 0, 0.2, 1)");
-					setAnimH(window.innerHeight);
-				}, 150);
-				const t3 = window.setTimeout(() => setPhase("maximized"), 350); // 150+200 完成
-				return () => {
-					window.clearTimeout(t2);
-					window.clearTimeout(t3);
-				};
-			}
-			case "restoring": {
-				// 还原（动量时序）：顶栏 0–160ms 下推；侧栏 60–340ms 滑入；终端 0–300ms 单曲线下沉
-				setAnimEase("height 300ms cubic-bezier(0.4, 0, 0.2, 1)");
-				setAnimH(useTerminalStore.getState().height);
-				const t = window.setTimeout(() => {
-					setAnimH(null);
-					setAnimEase(undefined);
-					setPhase("open");
-				}, 400);
-				return () => window.clearTimeout(t);
-			}
-			case "hiding": {
-				// 隐藏（快捷键/按钮，最大化与常态统一）：终端收到底部 0，完成后面板卸载并回到 closed。
-				// 最大化时顶栏/侧栏还原由 maximized→false 触发（App/Sidebar 订阅），终端收起段在这里完成。
-				setAnimEase("height 300ms cubic-bezier(0.4, 0, 0.2, 1)");
-				setAnimH(0);
-				const t1 = window.setTimeout(() => {
-					// 卸载与回 closed 必须同一 set（分开会触发本 effect 重跑并 cleanup 掉 t1/t2，面板永不卸载）
-					useTerminalStore.setState({ open: false, phase: "closed" });
-				}, 300);
-				const t2 = window.setTimeout(() => {
-					setAnimH(null);
-					setAnimEase(undefined);
-				}, 400);
-				return () => {
-					window.clearTimeout(t1);
-					window.clearTimeout(t2);
-				};
-			}
-			case "maximized": {
-				// 静止最大化态：高度保持全视口（动画阶段 2 已达 innerHeight，不清空，否则面板回落 dock 高但状态仍最大化）
-				setAnimH(window.innerHeight);
-				setAnimEase(undefined);
-				return;
-			}
-			default:
-				setAnimH(null);
-				setAnimEase(undefined);
-		}
-	}, [phase, setPhase]);
-
-	// resize 自适应：最大化动画期间窗口尺寸变化时重算目标高度（阶段 2 目标=全视口高）
-	useEffect(() => {
-		if (phase !== "maximizing" && phase !== "maximized") return;
-		const onResize = () => {
-			setAnimH((h) =>
-				h != null && h >= window.innerHeight - 48 ? window.innerHeight : window.innerHeight - 48,
-			);
-		};
-		window.addEventListener("resize", onResize);
-		return () => window.removeEventListener("resize", onResize);
-	}, [phase]);
-
 	// 全局焦点表（tabId → 终端句柄）：点右侧 tab 激活时由下方 effect 统一 focus（vscode 行为：点 tab 即聚焦终端）
 	const focusHandlesRef = useRef(new Map<number, TerminalViewHandle>());
 	const activeGroup = groups.find((g) => g.id === activeGroupId) ?? null;
@@ -453,24 +366,10 @@ export function TerminalDock(): React.JSX.Element {
 		window.addEventListener("pointerup", onUp);
 	};
 
-	// 状态机 effect 已由上/下方 [phase, setPhase] 统一驱动；动画中禁止其他状态转换
-	const animBusy =
-		phase === "opening" || phase === "maximizing" || phase === "restoring" || phase === "hiding";
-
 	return (
-		<div
-			className={`relative flex min-h-0 flex-col border-t border-border bg-surface${phase === "opening" ? " terminal-slide-in" : ""}`}
-			style={
-				animH != null
-					? { height: animH, transition: animEase }
-					: ({
-							height,
-							["--terminal-dock-h" as string]: phase === "opening" ? `${height}px` : undefined,
-						} as React.CSSProperties)
-			}
-		>
-			{/* 拖拽手柄（面板顶部边缘）：悬浮时显示，ns-resize；最大化时无意义不显示，动画中不显示 */}
-			{!maximized && animH == null && !animBusy && (
+		<div className="relative flex min-h-0 flex-col border-t border-border bg-surface" style={{ height }}>
+			{/* 拖拽手柄（面板顶部边缘）：悬浮时显示，ns-resize；最大化时无意义不显示 */}
+			{!maximized && (
 				<div
 					className="group/drag relative -mt-1.5 h-1.5 shrink-0 cursor-ns-resize"
 					onPointerDown={startResizeDrag}
@@ -498,13 +397,11 @@ export function TerminalDock(): React.JSX.Element {
 				<ToolbarButton
 					icon={maximized ? <RestoreIcon size={16} /> : <MaximizeIcon size={16} />}
 					title={maximized ? t("terminal.restore") : t("terminal.maximize")}
-					disabled={animBusy}
 					onClick={() => useTerminalStore.getState().setMaximized(!maximized)}
 				/>
 				<ToolbarButton
 					icon={<ChevronDownIcon size={16} />}
 					title={t("terminal.hide")}
-					disabled={animBusy}
 					onClick={() => useTerminalStore.getState().hide()}
 				/>
 			</div>

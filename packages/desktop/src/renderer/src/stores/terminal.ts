@@ -21,30 +21,6 @@ export interface TerminalHandleState {
 
 export type TerminalTabStatus = "launching" | "running" | "exited";
 
-/**
- * 终端面板状态机：最大化 / 非最大化 / 隐藏三态流转（vscode 式）。
- * 转换：
- *   closed → opening（toggle 打开，非恢复最大化；滑入完成 → open）
- *   closed → maximizing（toggle 打开且隐藏前最大化：直接两阶段；完成 → maximized）
- *   open → maximizing（setMaximized(true)；完成 → maximized）
- *   maximized → restoring（setMaximized(false)；完成 → open）
- *   open / maximized → hiding（toggle / hide；收起完成 → closed，面板卸载）
- * 约束：动画中（opening / maximizing / restoring / hiding）禁止一切其他转换（toggle/hide/setMaximized/setOpen 全部拒绝）。
- */
-export type TerminalPhase =
-	| "closed"
-	| "opening"
-	| "open"
-	| "maximizing"
-	| "maximized"
-	| "restoring"
-	| "hiding";
-
-/** 静止态才允许发起新转换（动画中锁定） */
-export function canTransition(phase: TerminalPhase): boolean {
-	return phase === "closed" || phase === "open" || phase === "maximized";
-}
-
 export interface TerminalTab {
 	/** renderer 自增 tab id（≠ pty id） */
 	id: number;
@@ -316,16 +292,12 @@ interface TerminalStore {
 	height: number;
 	/** 面板最大化（覆盖整个窗口，vscode 终端最大化语义） */
 	maximized: boolean;
-	/** 终端面板状态机（见 TerminalPhase 注释）；动画完成回调由 TerminalDock 调 setPhase 推进 */
-	phase: TerminalPhase;
-	/** 隐藏前是否最大化：下次打开时恢复最大化（动画时序与最大化相同），打开时消费清除 */
+	/** 隐藏前是否最大化：下次打开时恢复最大化，打开时消费清除 */
 	maximizedBeforeHide: boolean;
 	setOpen: (open: boolean) => void;
 	toggle: () => void;
-	/** 隐藏终端：最大化时走还原+收起动画（同 toggle 关闭分支），否则直接关闭面板 */
+	/** 隐藏终端：最大化时同时退出最大化并记住恢复状态，否则直接关闭面板 */
 	hide: () => void;
-	/** 动画阶段推进（TerminalDock 动画完成回调）：opening→open / maximizing→maximized / restoring→open / hiding→closed（同步 open:false） */
-	setPhase: (phase: TerminalPhase) => void;
 	/**
 	 * 新建独立终端（= 新 group，单 pane 单 tab，激活显示），返回 tab id。
 	 * vscode「独立终端也是一个 group」：＋ 按钮永远开一个独立 group。
@@ -357,35 +329,28 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
 	activePaneId: null,
 	height: TERMINAL_DEFAULT_HEIGHT,
 	maximized: false,
-	phase: "closed",
 	maximizedBeforeHide: false,
 	setOpen: (open) =>
 		set((state) => {
 			if (open === state.open) return state;
-			// 动画中（opening/maximizing/restoring/hiding）禁止状态转换
-			if (!canTransition(state.phase)) return state;
-			return { open, phase: open ? "opening" : "hiding" };
+			return { open };
 		}),
 	toggle: () =>
 		set((state) => {
-			// 动画中禁止一切转换（状态机锁定：最大化/还原/隐藏动画进行时其他操作一律拒绝）
-			if (!canTransition(state.phase)) return state;
 			if (state.open) {
-				// 最大化时隐藏：还原动画（顶栏/侧栏恢复）+ 终端收起到底部，动画结束后面板卸载；记住隐藏前状态供下次恢复
+				// 最大化时隐藏：退出最大化并记住恢复状态；否则直接关闭面板
 				if (state.maximized) {
-					return { phase: "hiding", maximized: false, maximizedBeforeHide: true };
+					return { open: false, maximized: false, maximizedBeforeHide: true };
 				}
-				// 常态隐藏：同样播收起动画（终端收到底部）后卸载
-				return { phase: "hiding" };
+				return { open: false };
 			}
-			// 隐藏前处于最大化：打开即恢复最大化（phase=maximizing 触发两阶段进入动画，时序与最大化相同）
+			// 隐藏前处于最大化：打开即恢复最大化
 			const restoreMaximized = state.maximizedBeforeHide;
 			// 首次打开（或全部终端关闭后重开）：默认建一个 shell，而不是空面板
 			if (state.groups.length === 0) {
 				const group = createGroup();
 				return {
 					open: true,
-					phase: restoreMaximized ? "maximizing" : "opening",
 					groups: [group],
 					activeGroupId: group.id,
 					activePaneId: firstPaneId(group.root),
@@ -395,21 +360,18 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
 			}
 			return {
 				open: true,
-				phase: restoreMaximized ? "maximizing" : "opening",
 				maximized: restoreMaximized,
 				maximizedBeforeHide: false,
 			};
 		}),
-	/** 隐藏终端：最大化时走还原+收起动画（同 toggle 关闭分支），否则同样播收起动画；都动画结束后卸载。动画中禁止。 */
+	/** 隐藏终端：最大化时退出最大化并记住恢复状态，否则直接关闭面板 */
 	hide: () =>
 		set((state) => {
-			if (!canTransition(state.phase)) return state;
 			if (state.maximized) {
-				return { phase: "hiding", maximized: false, maximizedBeforeHide: true };
+				return { open: false, maximized: false, maximizedBeforeHide: true };
 			}
-			return { phase: "hiding" };
+			return { open: false };
 		}),
-	setPhase: (phase) => set({ phase }),
 	newTerminal: () => {
 		const group = createGroup();
 		const tabId = group.root.kind === "pane" && group.root.tabs[0] ? group.root.tabs[0].id : -1;
@@ -500,13 +462,11 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
 	setHeight: (px) => set({ height: px }),
 	setMaximized: (maximized) =>
 		set((state) => {
-			// 动画中禁止状态转换（最大化/还原动画进行时其他操作一律拒绝）
-			if (!canTransition(state.phase)) return state;
 			if (maximized && !state.maximized && state.open) {
-				return { maximized: true, phase: "maximizing" };
+				return { maximized: true };
 			}
 			if (!maximized && state.maximized) {
-				return { maximized: false, phase: "restoring" };
+				return { maximized: false };
 			}
 			return state;
 		}),
