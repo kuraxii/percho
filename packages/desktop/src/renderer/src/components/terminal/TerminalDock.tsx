@@ -368,14 +368,15 @@ export function TerminalDock(): React.JSX.Element {
 
 	return (
 		<div className="relative flex min-h-0 flex-col border-t border-border bg-surface" style={{ height }}>
-			{/* 拖拽手柄（面板顶部边缘）：悬浮时显示，ns-resize；最大化时无意义不显示 */}
+			{/* 拖拽命中区 = 终端顶部边缘整条（侧栏把手同款：边缘即把手，不悬浮、无常驻线）：
+			   平时与 border-t 融为一体；hover/拖动时顶部出现 accent 线 + ns-resize 光标提示可拖。最大化时无意义不显示 */}
 			{!maximized && (
 				<div
-					className="group/drag relative -mt-1.5 h-1.5 shrink-0 cursor-ns-resize"
+					className="group/drag absolute inset-x-0 top-0 z-10 h-2 cursor-ns-resize"
 					onPointerDown={startResizeDrag}
 					title={t("terminal.resize")}
 				>
-					<div className="absolute inset-x-8 top-0 h-px bg-border transition-colors group-hover/drag:bg-accent" />
+					<div className="absolute inset-x-8 top-0 h-px bg-border opacity-0 transition-opacity group-hover/drag:opacity-100 group-hover/drag:bg-accent" />
 				</div>
 			)}
 			{/* 顶栏：终端标题 + 工具栏（vscode 标题栏动作：新建终端 / 最大化 / 隐藏终端） */}
