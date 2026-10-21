@@ -19,15 +19,15 @@ interface UiStore {
 	diffFocus: DiffFocus | null;
 	setDiffFocus: (sectionKey: string) => void;
 	clearDiffFocus: () => void;
-	/** diff 侧栏宽度（内存态，与开关一致不落盘；拖拽左缘调整，默认 420，范围 [320,720]） */
+	/** diff 侧栏宽度（内存态，与开关一致不落盘；拖拽左缘调整，默认 420，范围 [320, maxWidth]） */
 	diffSidebarWidth: number;
-	setDiffSidebarWidth: (width: number) => void;
+	setDiffSidebarWidth: (width: number, maxWidth?: number) => void;
 }
 
-/** diff 侧栏宽度钳制（非有限数回落默认 420） */
-export function clampDiffSidebarWidth(value: number): number {
+/** diff 侧栏宽度钳制（非有限数回落默认 420；maxWidth 缺省 720——拖拽上限由调用方传「侧栏右边界」动态值） */
+export function clampDiffSidebarWidth(value: number, maxWidth = 720): number {
 	if (!Number.isFinite(value)) return 420;
-	return Math.min(720, Math.max(320, Math.round(value)));
+	return Math.min(maxWidth, Math.max(320, Math.round(value)));
 }
 
 /** 界面态里只放「不跨会话、不落盘」的瞬时开关；持久化偏好一律走 ui-preferences */
@@ -45,5 +45,6 @@ export const useUiStore = create<UiStore>((set) => ({
 		set((state) => ({ diffFocus: { sectionKey, nonce: (state.diffFocus?.nonce ?? 0) + 1 } })),
 	clearDiffFocus: () => set({ diffFocus: null }),
 	diffSidebarWidth: 420,
-	setDiffSidebarWidth: (width) => set({ diffSidebarWidth: clampDiffSidebarWidth(width) }),
+	setDiffSidebarWidth: (width, maxWidth = 720) =>
+		set({ diffSidebarWidth: clampDiffSidebarWidth(width, maxWidth) }),
 }));

@@ -6,6 +6,7 @@ import { selectActiveCwd } from "../../lib/active-cwd";
 import { useSessionsStore } from "../../stores/sessions";
 import { useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
+import { useUiPreferencesStore } from "../../stores/ui-preferences";
 import { CloseIcon } from "../icons";
 import { DiffFileCard } from "./DiffFileCard";
 
@@ -163,8 +164,9 @@ export function DiffSidebar() {
 		const startX = event.clientX;
 		const startWidth = useUiStore.getState().diffSidebarWidth;
 		const onMove = (moveEvent: globalThis.PointerEvent) => {
-			// 向左拖（clientX 减小）→ 变宽
-			useUiStore.getState().setDiffSidebarWidth(startWidth + (startX - moveEvent.clientX));
+			// 向左拖（clientX 减小）→ 变宽；上限 = 侧边栏右边界（窗口宽 - 侧栏宽），不盖侧栏
+			const maxWidth = window.innerWidth - useUiPreferencesStore.getState().sidebarWidth;
+			useUiStore.getState().setDiffSidebarWidth(startWidth + (startX - moveEvent.clientX), maxWidth);
 		};
 		const onUp = () => {
 			window.removeEventListener("pointermove", onMove);
