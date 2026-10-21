@@ -137,35 +137,39 @@ export default function App() {
 					{/* 侧栏直接作为 flex 子项（bf58bb0 之前的布局）：被默认 stretch 拉满高，resize 把手满高可拖。
 					   终端最大化时靠 .sidebar.is-terminal-collapsed（width:0）自身收起（瞬变，8735f18 无动画）。 */}
 					<Sidebar />
-					{/* 聊天页容器：会话推/出过渡的动画主体（lib/session-page-slide.ts 认 data-session-page 找它，
-					   用 data-session-id 判定「新内容已上屏」）。顶栏与左栏不在此容器内 ⇒ 导航时保持静态 */}
-					<div
-						className="relative flex min-w-0 flex-1 flex-col"
-						data-session-page=""
-						data-session-id={activeSessionId ?? ""}
-					>
-						{/* 左侧会话轨道（临时工作区）：挂在 main + DockSlot 的父容器上，定位基准是 tab bar 以下的整列内容区——
+					{/* 右列（聊天 + 终端）：终端与聊天容器同级——会话推/出动画主体（data-session-page）不再含终端，
+					   切会话时终端保持静止（同顶栏/侧栏）。静态显示与移出前一致（终端仍是聊天区宽、聊天区底部）。 */}
+					<div className="relative flex min-w-0 flex-1 flex-col">
+						{/* 聊天页容器：会话推/出过渡的动画主体（lib/session-page-slide.ts 认 data-session-page 找它，
+						   用 data-session-id 判定「新内容已上屏」）。顶栏与左栏不在此容器内 ⇒ 导航时保持静态 */}
+						<div
+							className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+							data-session-page=""
+							data-session-id={activeSessionId ?? ""}
+						>
+							{/* 左侧会话轨道（临时工作区）：挂在 main + DockSlot 的父容器上，定位基准是 tab bar 以下的整列内容区——
 						    输入框高度变化不压缩它的居中参考系；收起态是纯覆盖层，不占宽、不挤压聊天布局（设置里默认关） */}
-						<SessionRail />
-						{/* 右侧 DiffSidebar 是独立浮层，不参与中间聊天列宽度与布局动画。 */}
-						<main className="relative min-h-0 flex-1">
-							{showEmpty ? <EmptyState /> : <MessageList />}
-							{/* Todo 槽位宿主：display:contents 不产生盒子（插件/默认 Todo 的原绝对定位不受影响），
+							<SessionRail />
+							{/* 右侧 DiffSidebar 是独立浮层，不参与中间聊天列宽度与布局动画。 */}
+							<main className="relative min-h-0 flex-1">
+								{showEmpty ? <EmptyState /> : <MessageList />}
+								{/* Todo 槽位宿主：display:contents 不产生盒子（插件/默认 Todo 的原绝对定位不受影响），
 							    只给 CornerStack 一个可 observe 的挂载点（它去测量渲染根的实际底边） */}
-							<div ref={todoSlotHostRef} style={{ display: "contents" }}>
-								<Slot name={UI_SLOTS.TodoPanel} props={{}} fallback={TodoPanel} />
-							</div>
-							{/* 右上角：频道胶囊 + top-right 贡献共用一个堆叠（CornerStack），一起避开 Todo 实际底边；
+								<div ref={todoSlotHostRef} style={{ display: "contents" }}>
+									<Slot name={UI_SLOTS.TodoPanel} props={{}} fallback={TodoPanel} />
+								</div>
+								{/* 右上角：频道胶囊 + top-right 贡献共用一个堆叠（CornerStack），一起避开 Todo 实际底边；
 							    top-left 用 leading 插返回父会话入口，与左上区域贡献共用同一定位容器 */}
-							<CornerStack slotHostRef={todoSlotHostRef} />
-							<RegionHost
-								region={UI_REGIONS.CornerTopLeft}
-								leading={hasParentRelation ? <SubagentBackButton /> : undefined}
-							/>
-							<RegionHost region={UI_REGIONS.CornerBottomLeft} />
-							<RegionHost region={UI_REGIONS.CornerBottomRight} />
-						</main>
-						<DockSlot sessionId={activeSessionId} hideComposer={showEmpty} />
+								<CornerStack slotHostRef={todoSlotHostRef} />
+								<RegionHost
+									region={UI_REGIONS.CornerTopLeft}
+									leading={hasParentRelation ? <SubagentBackButton /> : undefined}
+								/>
+								<RegionHost region={UI_REGIONS.CornerBottomLeft} />
+								<RegionHost region={UI_REGIONS.CornerBottomRight} />
+							</main>
+							<DockSlot sessionId={activeSessionId} hideComposer={showEmpty} />
+						</div>
 						{terminalOpen && <TerminalDock />}
 					</div>
 					<DiffSidebar />
