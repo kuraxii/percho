@@ -281,6 +281,7 @@ export const en: Messages = {
 		empty: "No file changes in this session yet",
 		expandMore: "Show remaining {lines} lines",
 		turnLabel: "Turn {n}",
+		resize: "Resize panel",
 	},
 	tool: {
 		running: "Running…",

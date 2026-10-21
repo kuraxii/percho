@@ -1,5 +1,5 @@
 import { deriveTurnChanges, type TurnChanges } from "@percho/shared";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { selectActiveCwd } from "../../lib/active-cwd";
@@ -100,6 +100,7 @@ export function DiffSidebar() {
 	const t = useT();
 	const open = useUiStore((s) => s.diffSidebarOpen);
 	const setOpen = useUiStore((s) => s.setDiffSidebarOpen);
+	const diffSidebarWidth = useUiStore((s) => s.diffSidebarWidth);
 	const diffFocus = useUiStore((s) => s.diffFocus);
 	const clearDiffFocus = useUiStore((s) => s.clearDiffFocus);
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
@@ -156,8 +157,32 @@ export function DiffSidebar() {
 		clearDiffFocus();
 	}, [diffFocus, visibleTurns, clearDiffFocus]);
 
+	// 拖拽左缘调整宽度（侧栏把手同款：左缘整条命中区，ew-resize，宽度实时写入内存态 store）
+	const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+		event.preventDefault();
+		const startX = event.clientX;
+		const startWidth = useUiStore.getState().diffSidebarWidth;
+		const onMove = (moveEvent: globalThis.PointerEvent) => {
+			// 向左拖（clientX 减小）→ 变宽
+			useUiStore.getState().setDiffSidebarWidth(startWidth + (startX - moveEvent.clientX));
+		};
+		const onUp = () => {
+			window.removeEventListener("pointermove", onMove);
+			window.removeEventListener("pointerup", onUp);
+		};
+		window.addEventListener("pointermove", onMove);
+		window.addEventListener("pointerup", onUp);
+	};
+
 	return (
-		<aside className={`diff-sidebar${open ? " open" : ""}`} aria-hidden={!open} inert={!open}>
+		<aside
+			className={`diff-sidebar${open ? " open" : ""}`}
+			style={{ width: `min(${diffSidebarWidth}px, 38vw)` }}
+			aria-hidden={!open}
+			inert={!open}
+		>
+			{/* 拖拽命中区（左缘整条）：平时无视觉，hover 时左缘出现 accent 竖线（见 globals.css） */}
+			{open && <div className="diff-sidebar-resize" onPointerDown={startResize} title={t("diff.resize")} />}
 			<div className="diff-sidebar-in">
 				<div className="diff-side-head">
 					<span className="diff-side-title">{t("diff.title")}</span>

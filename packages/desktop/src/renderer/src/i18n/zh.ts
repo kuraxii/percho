@@ -278,6 +278,7 @@ export const zh = {
 		empty: "本会话还没有文件变更",
 		expandMore: "展开其余 {lines} 行",
 		turnLabel: "第 {n} 轮",
+		resize: "调整宽度",
 	},
 	tool: {
 		running: "运行中…",

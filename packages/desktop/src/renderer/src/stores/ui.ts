@@ -19,6 +19,15 @@ interface UiStore {
 	diffFocus: DiffFocus | null;
 	setDiffFocus: (sectionKey: string) => void;
 	clearDiffFocus: () => void;
+	/** diff 侧栏宽度（内存态，与开关一致不落盘；拖拽左缘调整，默认 420，范围 [320,720]） */
+	diffSidebarWidth: number;
+	setDiffSidebarWidth: (width: number) => void;
+}
+
+/** diff 侧栏宽度钳制（非有限数回落默认 420） */
+export function clampDiffSidebarWidth(value: number): number {
+	if (!Number.isFinite(value)) return 420;
+	return Math.min(720, Math.max(320, Math.round(value)));
 }
 
 /** 界面态里只放「不跨会话、不落盘」的瞬时开关；持久化偏好一律走 ui-preferences */
@@ -35,4 +44,6 @@ export const useUiStore = create<UiStore>((set) => ({
 	setDiffFocus: (sectionKey) =>
 		set((state) => ({ diffFocus: { sectionKey, nonce: (state.diffFocus?.nonce ?? 0) + 1 } })),
 	clearDiffFocus: () => set({ diffFocus: null }),
+	diffSidebarWidth: 420,
+	setDiffSidebarWidth: (width) => set({ diffSidebarWidth: clampDiffSidebarWidth(width) }),
 }));
