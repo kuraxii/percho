@@ -33,13 +33,13 @@ describe("current directory is pure and preserves null/unknown compatibility", (
 		expect(leaf.statements.filter(ts.isImportDeclaration)).toEqual([]);
 		for (const file of [
 			"sidebar/Sidebar",
-			"session/SessionTabBar",
 			"composer/Composer",
 			"session/ProjectBranchPicker",
 			"diff/DiffSidebar",
 			"chat/Markdown",
 			"chat/TurnDiffChip",
 			"settings/mcp/McpPanel",
+			"terminal/TerminalView",
 		]) {
 			const text = readFileSync(new URL(`../components/${file}.tsx`, import.meta.url), "utf8");
 			const parsed = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);

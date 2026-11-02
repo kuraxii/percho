@@ -20,10 +20,8 @@ import type { ComponentProps } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
-import { selectActiveCwd } from "../../lib/active-cwd";
 import { prefersReducedMotion, useListShift } from "../../lib/use-list-shift";
 import { useWorkspaceRemoval } from "../../lib/workspace-actions";
-import { COMPOSER_FOCUS_EVENT } from "../../stores/drafts";
 import { useProjectsStore } from "../../stores/projects";
 import {
 	resolveWorkspaceSessions,
@@ -34,14 +32,13 @@ import { useSessionsStore } from "../../stores/sessions";
 import { useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { useUiPreferencesStore } from "../../stores/ui-preferences";
-import { CloseIcon, DiffIcon, PanelLeftIcon, PinIcon, PlusIcon } from "../icons";
+import { CloseIcon, DiffIcon, PanelLeftIcon, PinIcon } from "../icons";
 import { ContextMenu, type ContextMenuItem } from "../ui/ContextMenu";
 import type { MenuAnchor } from "../ui/place-menu";
 import { RenamePopover } from "./RenamePopover";
 import { SessionAvatar } from "./SessionAvatar";
 import { canOpenSessionMenu, renameSession, sessionMenuItems } from "./session-menu";
 import { sessionTitle, useSessionStatus } from "./session-status";
-import { UpdateButton } from "./UpdateButton";
 
 /**
  * 拖拽让位/落位的减速曲线（浏览器标签同款手感）；增删胶囊的让位动画复用同一曲线
@@ -236,9 +233,7 @@ export function SessionTabBar() {
 	const platform = getPi().platform;
 	const sessions = useSessionsStore((s) => s.sessions);
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
-	const activateNewSessionDraft = useSessionsStore((s) => s.activateNewSessionDraft);
 
-	const cwd = useSessionsStore(selectActiveCwd);
 	const diffSidebarOpen = useUiStore((s) => s.diffSidebarOpen);
 	const toggleDiffSidebar = useUiStore((s) => s.toggleDiffSidebar);
 	const sidebarCollapsed = useUiPreferencesStore((s) => s.sidebarCollapsed);
@@ -422,22 +417,7 @@ export function SessionTabBar() {
 					</DragOverlay>
 				</DndContext>
 			</div>
-			<UpdateButton />
-			<button
-				type="button"
-				className="no-drag shrink-0 rounded-lg p-1.5 text-ink-dim transition-colors hover:bg-hover hover:text-ink"
-				onClick={() => {
-					// 单例 draft：从真实会话进入时按当前会话项目/模型等配置起步；
-					// 已经在 draft 页再次点击则原样保留，并聚焦输入框
-					const hadDraft = useSessionsStore.getState().newSessionDraft !== null;
-					activateNewSessionDraft();
-					if (hadDraft) window.dispatchEvent(new CustomEvent(COMPOSER_FOCUS_EVENT));
-				}}
-				aria-label={cwd ? t("tabbar.newSession") : t("tabbar.pickProjectFirst")}
-			>
-				<PlusIcon size={18} />
-			</button>
-			{/* diff 侧栏开关：新会话按钮之后，active 态底色区分 */}
+			{/* diff 侧栏开关：active 态底色区分 */}
 			<button
 				type="button"
 				className={`no-drag relative shrink-0 rounded-lg p-1.5 transition-colors ${

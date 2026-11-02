@@ -24,8 +24,6 @@
 	--color-on-ink: var(--color-on-ink);
 	--color-accent: var(--color-accent);
 	--color-on-accent: var(--color-on-accent);
-	--color-update: var(--color-update);
-	--color-on-update: var(--color-on-update);
 	--color-err: var(--color-err);
 	--color-warn: var(--color-warn);
 	--color-info: var(--color-info);
@@ -64,9 +62,6 @@
 	--lg-c1: #c9c9d1;
 	--lg-c2: #e0e0e6;
 	--lg-lb: #b0b0b8;
-	/* 「重启」胶囊：很浅的蓝底 + 比背景深一档的中蓝字 */
-	--color-update: #e0f2fe;
-	--color-on-update: #0284c7;
 	/* 报错 severity token：仅供 graphics（glyph/图标）着色用（error-system spec：只限一枚 glyph）+ 文案色 */
 	--color-err: #d6352c;
 	--color-warn: #c2740a;
@@ -132,8 +127,6 @@
 	--lg-c1: #35353c;
 	--lg-c2: #2b2b32;
 	--lg-lb: #4a4a52;
-	--color-update: #0c4a6e;
-	--color-on-update: #7dd3fc;
 	--color-err: #f87171;
 	--color-warn: #f0b84a;
 	--color-info: #6e6e77;

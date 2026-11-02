@@ -18,8 +18,6 @@ export const zh = {
 		confirm: "退出",
 	},
 	tabbar: {
-		newSession: "新建会话",
-		pickProjectFirst: "请先选择项目目录",
 		untitled: "新会话",
 		settings: "设置",
 		close: "关闭会话（不删除）",
@@ -48,7 +46,6 @@ export const zh = {
 		downloading: "下载中 {percent}%",
 		downloaded: "已下载，重启后安装",
 		installNow: "重启并安装",
-		restart: "重启",
 		upToDate: "已是最新版本",
 		checkFailed: "检查更新失败：{message}",
 		helpTitle: "更新遇到问题？",

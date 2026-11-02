@@ -20,8 +20,6 @@ export const en: Messages = {
 		confirm: "Quit",
 	},
 	tabbar: {
-		newSession: "New session",
-		pickProjectFirst: "Pick a project directory first",
 		untitled: "New session",
 		settings: "Settings",
 		close: "Close session (keep on disk)",
@@ -48,7 +46,6 @@ export const en: Messages = {
 		downloading: "Downloading {percent}%",
 		downloaded: "Downloaded, installs on restart",
 		installNow: "Restart & install",
-		restart: "Restart",
 		upToDate: "You're up to date",
 		checkFailed: "Update check failed: {message}",
 		helpTitle: "Having trouble updating?",
