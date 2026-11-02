@@ -16,6 +16,7 @@ import { Toaster } from "./components/Toaster";
 import { TerminalDock } from "./components/terminal/TerminalDock";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
 import { initDailyDir } from "./lib/daily";
+import { useRecentSessionDwell } from "./lib/use-recent-session-dwell";
 import { useSessionGc } from "./lib/use-session-gc";
 import { initUiPlugins } from "./plugins/loader";
 import { RegionHost } from "./plugins/RegionHost";
@@ -82,6 +83,8 @@ export default function App() {
 	// 一次性 bootstrap：开屏就绪信号 + 更新状态 + UI 插件加载
 	// 会话内存策略（K=3 热会话 + 受保护不卸）：全局挂一次，策略细节在 lib/session-gc.ts
 	useSessionGc();
+	// 「最近」的停留计时：切到会话停够 10s 才记一笔（扫过一眼不算），发消息则立即记
+	useRecentSessionDwell();
 
 	useEffect(() => {
 		// 上次项目目录：启动即预填（用户不用重选项目）。**只带 cwd，不恢复任何会话**——

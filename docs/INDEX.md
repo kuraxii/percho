@@ -26,7 +26,7 @@
 | 导航、并发装载、历史就绪 | renderer `stores/session-navigation.ts`、`session-loading.ts`、`session-history.ts` |
 | 会话目录、项目、左栏分组 | renderer `stores/projects.ts`、`lib/sidebar-groups.ts`、`components/sidebar/` |
 | 顶栏（拖动区/左栏与 diff 开关） | renderer `components/session/TopBar.tsx`、`App.tsx` |
-| 左栏「最近」（跨项目最近打开，固定 8 条，跨重启保留） | 顺序：shared `recent-sessions.ts` + `stores/ui-preferences.ts` 的 `recentSessions`（落盘）；行：renderer `lib/recent-sessions.ts`、`components/sidebar/RecentSection.tsx`；日常会话与只读检视会话不计入 |
+| 左栏「最近」（跨项目、固定 8 条、跨重启保留、可收起） | 顺序：shared `recent-sessions.ts` + `stores/ui-preferences.ts` 的 `recentSessions`/`recentCollapsed`（落盘）；行：renderer `lib/recent-sessions.ts`、`components/sidebar/RecentSection.tsx`；写入策略：发消息立刻记 + 停留 10 秒记（`lib/use-recent-session-dwell.ts`），打开本身不记；日常会话与只读检视会话不计入 |
 | 会话自动卸载、频道驻留 | renderer `lib/session-gc*.ts`、`lib/use-session-gc.ts`；backend `channel-subscriptions.ts` |
 | 消息事件、历史回放、轮次派生 | shared `transcript/`；backend `session/messages.ts`；renderer `stores/transcript.ts` |
 | 消息气泡、Markdown、Mermaid、工具卡 | renderer `components/chat/`；流式合流 `stores/event-conflator.ts` |

@@ -3,7 +3,6 @@ import { create } from "zustand";
 import { getPi } from "../api";
 import { initDailyDir, isDailyCwd } from "../lib/daily";
 import { pathLastSegment } from "../lib/path-display";
-import { isRecentCandidate } from "../lib/recent-sessions";
 import { useChannelSubscriptionsStore } from "./channel-subscriptions";
 import { useSessionsStore } from "./sessions";
 import { useSubagentReturnStore } from "./subagent-return";
@@ -189,31 +188,18 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => {
 		openSession: async (session) => {
 			const sessionsState = useSessionsStore.getState();
 			const opened = sessionsState.sessions.find((s) => s.sessionId === session.sessionId);
-			// 「最近」记录：用户的这个点击。放在实际切换**之前**没意义（两者都同步/异步一致），
-			// 但必须放在失败分支之外 —— 打开失败不该把会话顶进「最近」。
+			// 注意这里**不记「最近」**：切过去只代表「扫过一眼」，停留够久（`useRecentSessionDwell`）
+			// 或在那里发了消息（`noteActiveSessionRecent`）才算你真的用了它。
 			if (opened) {
 				// 已加载：同步切（这次点击就是最新意图）
 				sessionsState.switchSession(opened.sessionId);
-				noteRecent(opened);
 				return;
 			}
 			// 未加载：从历史打开。失败已由共享 open 链 toast；迟到（latest:false）不抢焦点
-			const result = await sessionsState.openFromHistory(session.sessionFile ?? "");
-			if (result.ok) noteRecent(result.meta);
+			await sessionsState.openFromHistory(session.sessionFile ?? "");
 		},
 	};
 });
-
-/**
- * 记一次「最近打开」：用户点了这一行且真的开起来了。
- *
- * 判据与派生层共用 `isRecentCandidate`（排除日常空间与只读子代理会话），
- * 所以写入侧和渲染侧不会各写一份规则后漂移。
- */
-function noteRecent(session: SessionMeta): void {
-	if (!isRecentCandidate(session)) return;
-	useUiPreferencesStore.getState().noteRecentSession(session.sessionId);
-}
 
 /**
  * 目录写穿：把内存里目录还没有的会话补进去（**只补缺、不覆盖**——磁盘权威的最小改动）。

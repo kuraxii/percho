@@ -26,9 +26,10 @@ const piMock = vi.hoisted(() => ({
 vi.mock("../api", () => ({ getPi: () => piMock }));
 
 import { selectActiveCwd } from "../lib/active-cwd";
+import { setDailyDirForTest } from "../lib/daily";
 import { NEW_SESSION_DRAFT_KEY, useDraftStore } from "./drafts";
 import { clearSessionHistory, isHistoryReady, retrySessionHistory } from "./session-history";
-import { partitionSessionsByPin, useSessionsStore } from "./sessions";
+import { noteActiveSessionRecent, partitionSessionsByPin, useSessionsStore } from "./sessions";
 import { useToastsStore } from "./toasts";
 import { useTranscriptStore } from "./transcript";
 import { useUiPreferencesStore } from "./ui-preferences";
@@ -43,6 +44,8 @@ function realMeta(sessionId: string, cwd: string): SessionMeta {
 		createdAt: 1,
 	};
 }
+
+const DAILY_DIR = "/home/test/.percho/daily";
 
 function resetStore() {
 	for (const id of Object.keys(useTranscriptStore.getState().bySession)) clearSessionHistory(id);
@@ -61,6 +64,7 @@ function resetStore() {
 	useDraftStore.setState({ bySession: {} });
 	// 「最近」列表在 ui-preferences：逐用例复位，避免上一条用例的记录漏过来
 	useUiPreferencesStore.setState({ recentSessions: [] });
+	setDailyDirForTest(null);
 }
 
 beforeEach(() => {
@@ -220,22 +224,50 @@ describe("closeSession", () => {
 	});
 });
 
-describe("「最近」记录（新建 / 分叉都算刚开的会话）", () => {
-	it("fork 出来的会话顶到「最近」最前", async () => {
+describe("「最近」记录（只有发消息才写；fork 本身不写）", () => {
+	it("noteActiveSessionRecent：发的那个会话顶到「最近」最前", () => {
+		useSessionsStore.setState({
+			sessions: [realMeta("r1", "/proj"), realMeta("r2", "/proj")],
+			activeSessionId: "r1",
+		});
+
+		noteActiveSessionRecent("r1");
+
+		expect(useUiPreferencesStore.getState().recentSessions).toEqual(["r1"]);
+	});
+
+	it("noteActiveSessionRecent：日常空间会话不记（判据与派生层共用）", () => {
+		setDailyDirForTest(DAILY_DIR);
+		useSessionsStore.setState({ sessions: [realMeta("d1", DAILY_DIR)], activeSessionId: "d1" });
+
+		noteActiveSessionRecent("d1");
+
+		expect(useUiPreferencesStore.getState().recentSessions).toEqual([]);
+	});
+
+	it("noteActiveSessionRecent：只读检视会话不记", () => {
+		useSessionsStore.setState({
+			sessions: [{ ...realMeta("sub-1", "/proj"), readOnly: true }],
+			activeSessionId: "sub-1",
+		});
+
+		noteActiveSessionRecent("sub-1");
+
+		expect(useUiPreferencesStore.getState().recentSessions).toEqual([]);
+	});
+
+	it("noteActiveSessionRecent：查不到的 id 静默跳过（后端刚建、列表还没写穿的边缘）", () => {
+		noteActiveSessionRecent("ghost");
+		expect(useUiPreferencesStore.getState().recentSessions).toEqual([]);
+	});
+
+	it("fork 出来的会话不自动进「最近」（还没在里面发过消息）", async () => {
 		useSessionsStore.setState({ sessions: [realMeta("r1", "/proj")], activeSessionId: "r1" });
 		piMock.forkSession.mockResolvedValue(realMeta("fork-1", "/proj"));
 
 		await useSessionsStore.getState().forkSession({});
 
-		expect(useUiPreferencesStore.getState().recentSessions).toEqual(["fork-1"]);
-	});
-
-	it("fork 失败不记录", async () => {
-		useSessionsStore.setState({ sessions: [realMeta("r1", "/proj")], activeSessionId: "r1" });
-		piMock.forkSession.mockRejectedValue(new Error("boom"));
-
-		await useSessionsStore.getState().forkSession({});
-
+		expect(useSessionsStore.getState().activeSessionId).toBe("fork-1");
 		expect(useUiPreferencesStore.getState().recentSessions).toEqual([]);
 	});
 });

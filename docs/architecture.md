@@ -35,7 +35,13 @@ UI 插件的槽位/区域标识以 shared `ui-plugins.ts` 为单源。新增对�
 
 左栏「最近」= **落盘的顺序表 + 派生的行**：顺序存在 `ui-state.json` 的 `recentSessions`（id 数组，最近在前，固定 8 条），行内容仍从 `projects.allSessions`（目录 ∪ 内存）按 id 查出来。它接替了已删除的顶栏会话 tab —— 不要再加「成员表快照」（`barsSessionsVisible`/`sessionWorkspace` 那套已删）或「加载更多」。
 
-写入侧只有“**用户真的打开了它**”这一个来源（`openSession` / promotion / fork），且共用 `isRecentCandidate` 排除**日常空间**与只读子代理检视会话 —— 日常是随手问几句的草稿区，记进去会把项目会话挤出 8 个格子。删除会话时 `forgetRecentSession` 清掉 id（避免留下点不开的残留）。
+写入侧看的是「**你真的用它了**」，不是「你点过它」：
+
+- **发消息立刻记**（`stores/sessions.ts` 的 `noteActiveSessionRecent`，由 composer 发送调用）；
+- **停在它上面满 10 秒也记**（`lib/use-recent-session-dwell.ts`，切走立刻作废计时）；
+- 打开/切换/fork 本身**不记**：左栏连点几行只是扫一眼，不该把 8 个格子刷成刚扫过的会话。
+
+两条入口共用 `isRecentCandidate` 排除**日常空间**与只读子代理检视会话 —— 日常是随手问几句的草稿区，记进去会把项目会话挤出 8 个格子。删除会话时 `forgetRecentSession` 清掉 id（避免留下点不开的残留）。
 
 会话时间以 header 和 user/assistant 消息时间为准，不用文件 birthtime；合并内存与历史 meta 时，不能用不完整的内存字段覆盖权威时间，造成排序漂移。
 

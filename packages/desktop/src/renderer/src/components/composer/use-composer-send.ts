@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { useCommandTracksStore } from "../../stores/command-tracks";
-import { useSessionsStore } from "../../stores/sessions";
+import { noteActiveSessionRecent, useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
 import { pushToast } from "../../stores/toasts";
 import { useTranscriptStore } from "../../stores/transcript";
@@ -162,6 +162,8 @@ export function useComposerSend(options: UseComposerSendOptions) {
 		options.setImages([]);
 		options.setAttachments([]);
 		options.setQuotes([]);
+		// 「最近」：用户在这里发了消息 = 真实使用，立即顶到最前（不等停留计时）
+		noteActiveSessionRecent(sessionId);
 		// 乐观置工作中：agent_start 事件到达前立即显示，失败后回滚
 		useTranscriptStore.getState().markAgentActive(sessionId, true);
 		// 命令跟踪槽（仅斜杠落回 = 扩展命令候选；模板/skill 由 SDK 原生处理，回执区分）：

@@ -278,7 +278,6 @@ async function promoteDraft(draft: NewSessionDraftConfig): Promise<string | null
 						: null,
 			};
 		});
-		noteRecent(meta);
 		useTranscriptStore.getState().resetSession(meta.sessionId);
 		// 全新会话的历史底座天然为空；在首次用户消息前即确认就绪。
 		finishSessionHistory(meta.sessionId);
@@ -655,7 +654,6 @@ export const useSessionsStore = create<SessionsStore>((_set, get) => ({
 				return latest ? { sessions, activeSessionId: meta.sessionId } : { sessions };
 			});
 			await loadSessionBundle(meta.sessionId);
-			noteRecent(meta);
 			// fork 事实已发生：即便已不是最新意图也要把新 id 交给调用方
 			return meta.sessionId;
 		} catch (error) {
@@ -821,10 +819,17 @@ const sessionLoader = createSessionLoader({
 const { loadSessionBundle, restorePermissionMode, ensureOpenSession } = sessionLoader;
 
 /**
- * 记一次「最近打开」：新建/分叉出来的会话也算（用户刚开的，就是要来回切的那个）。
+ * 记一次「最近」：**用户在该会话里发了消息**（真实使用，不是扫过一眼）。
+ *
  * 判据与派生层共用 `isRecentCandidate`（排除日常空间与只读子代理检视会话）。
+ * 只从「发消息」这一个入口写：新建/分叉/切换本身都不写 —— 切过去可能只是扫一眼，
+ * 停留够久的由 `lib/use-recent-session-dwell.ts` 补记。
+ *
+ * 传 sessionId 而不是 meta：调用方（composer）手上是发送时的活动会话 id，
+ * 在后端刚建、列表还没写穿的边缘查不到就静默跳过（不值得为「最近」多跑一次拉取）。
  */
-function noteRecent(meta: SessionMeta): void {
-	if (!isRecentCandidate(meta)) return;
-	useUiPreferencesStore.getState().noteRecentSession(meta.sessionId);
+export function noteActiveSessionRecent(sessionId: string): void {
+	const session = useSessionsStore.getState().sessions.find((s) => s.sessionId === sessionId);
+	if (!session || !isRecentCandidate(session)) return;
+	useUiPreferencesStore.getState().noteRecentSession(sessionId);
 }
