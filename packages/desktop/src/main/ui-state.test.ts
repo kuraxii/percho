@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { RECENT_SESSION_LIMIT } from "@percho/shared";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -187,6 +188,45 @@ describe("sidebarWidth 白名单（用户意图宽度）", () => {
 		const state = await loadUiState();
 		expect(state?.sidebarWidth).toBe(320);
 		expect(state?.pinnedSessions).toEqual(["s1"]);
+	});
+});
+
+describe("recentSessions 白名单（左栏「最近」的落盘顺序）", () => {
+	it("缺字段 → 空表（老文件）", async () => {
+		writeFileSync(file(), "{}");
+		expect((await loadUiState())?.recentSessions).toEqual([]);
+	});
+
+	it("写入后读回：顺序原样保留（最近在前）", async () => {
+		await saveUiState({ recentSessions: ["c", "a", "b"] });
+		expect((await loadUiState())?.recentSessions).toEqual(["c", "a", "b"]);
+	});
+
+	it("超过上限时读回裁到上限（手改文件/未来改上限都不会越用越长）", async () => {
+		writeFileSync(file(), JSON.stringify({ recentSessions: Array.from({ length: 20 }, (_, i) => `s${i}`) }));
+		const state = await loadUiState();
+		expect(state?.recentSessions).toHaveLength(RECENT_SESSION_LIMIT);
+		expect(state?.recentSessions?.[0]).toBe("s0");
+	});
+
+	it("去重（同一 id 只留第一次出现的位置）、丢空串与非字符串", async () => {
+		writeFileSync(file(), JSON.stringify({ recentSessions: ["a", "", "a", 3, null, "b"] }));
+		expect((await loadUiState())?.recentSessions).toEqual(["a", "b"]);
+	});
+
+	it("非数组（字符串/数字/null）一律落成 []，不炸启动", async () => {
+		for (const raw of ['{"recentSessions":"abc"}', '{"recentSessions":7}', '{"recentSessions":null}']) {
+			writeFileSync(file(), raw);
+			expect((await loadUiState())?.recentSessions, raw).toEqual([]);
+		}
+	});
+
+	it("保存补丁不冲掉其它字段", async () => {
+		await saveUiState({ recentSessions: ["a"], pinnedSessions: ["p1"] });
+		await saveUiState({ recentSessions: ["b", "a"] });
+		const state = await loadUiState();
+		expect(state?.recentSessions).toEqual(["b", "a"]);
+		expect(state?.pinnedSessions).toEqual(["p1"]);
 	});
 });
 

@@ -294,7 +294,7 @@ describe("openSession", () => {
 			loaded: false,
 		});
 		useSessionsStore.setState({ sessions: [], activeSessionId: null, cwd: null, lastUsedAt: {} });
-		useUiPreferencesStore.setState({ pinnedSessions: [] });
+		useUiPreferencesStore.setState({ pinnedSessions: [], recentSessions: [] });
 	});
 
 	it("用户点未加载会话：走按需打开并切过去", async () => {
@@ -329,6 +329,41 @@ describe("openSession", () => {
 		await useProjectsStore.getState().openSession({ ...loaded("sub-1"), readOnly: true });
 
 		expect(useSessionsStore.getState().activeSessionId).toBe("sub-1");
+	});
+
+	describe("「最近」记录（点了真的开起来才记，日常会话不记）", () => {
+		it("打开已加载会话 → 顶到「最近」最前", () => {
+			useSessionsStore.setState({ sessions: [loaded("m1")], activeSessionId: null });
+
+			void useProjectsStore.getState().openSession(loaded("m1"));
+
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual(["m1"]);
+		});
+
+		it("按需打开成功 → 记录（不靠渲染时过滤，写入侧就该有它）", async () => {
+			piMock.openSession.mockResolvedValue(loaded("h1"));
+
+			await useProjectsStore.getState().openSession(loaded("h1"));
+
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual(["h1"]);
+		});
+
+		it("打开失败 → 不记录（点不开的东西不该占一个位子）", async () => {
+			piMock.openSession.mockRejectedValue(new Error("ENOENT"));
+
+			await useProjectsStore.getState().openSession(loaded("gone"));
+
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual([]);
+		});
+
+		it("日常空间的会话打开后不记录（写入侧挡住，否则顶到最前就把项目会话挤掉了）", async () => {
+			setDailyDirForTest(DAILY);
+			piMock.openSession.mockResolvedValue({ ...loaded("daily-1"), cwd: DAILY });
+
+			await useProjectsStore.getState().openSession({ ...loaded("daily-1"), cwd: DAILY });
+
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual([]);
+		});
 	});
 
 	describe("目录 latest-wins（adoptCatalog 参与排号）", () => {

@@ -8,6 +8,7 @@ export * from "./marquee-motion";
 export * from "./mcp";
 export * from "./model-visibility";
 export * from "./packages";
+export * from "./recent-sessions";
 export * from "./session";
 export * from "./settings";
 export * from "./sidebar";

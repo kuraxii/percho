@@ -1,7 +1,8 @@
 import { type CSSProperties, useCallback, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { selectActiveCwd } from "../../lib/active-cwd";
-import { deriveRecentSessions, recentProjectLabel } from "../../lib/recent-sessions";
+import { isDailyCwd } from "../../lib/daily";
+import { deriveRecentSessions, RECENT_LIMIT, recentProjectLabel } from "../../lib/recent-sessions";
 import { deriveSidebarNavigation, toggleCollapsedNode } from "../../lib/sidebar-groups";
 import { useEdgeFade } from "../../lib/use-edge-fade";
 import { useProjectsStore } from "../../stores/projects";
@@ -52,8 +53,8 @@ export function Sidebar() {
 	}, []);
 	// 内存会话（含刚创建还没进历史的真实会话与只读子会话）：与磁盘历史合并成左栏数据源（spec D2）
 	const memorySessions = useSessionsStore((s) => s.sessions);
-	// 「最近」的排序键：最近被打开/切换的时刻（不是 modifiedAt，后台 agent 不许顶乱顺序）
-	const lastUsedAt = useSessionsStore((s) => s.lastUsedAt);
+	// 「最近」的顺序：**落盘**的用户意图顺序（不是 modifiedAt，后台 agent 不许顶乱顺序）
+	const recentSessions = useUiPreferencesStore((s) => s.recentSessions);
 	// 默认展开组使用同一当前目录规则，不依赖外部seed的兼容镜像。
 	const activeCwd = useSessionsStore(selectActiveCwd);
 
@@ -91,16 +92,21 @@ export function Sidebar() {
 	const batching = useSidebarBatching({ search, defaults: data.defaultExpandedKeys });
 	const empty = data.daily === null && data.projects.length === 0;
 
-	// 「最近」：跨项目、固定 8 条、按最近打开排序（纯函数层派生，本组件只取数与传递）。
+	// 「最近」：跨项目、固定 8 条、按落盘的最近打开顺序（纯函数层派生，本组件只取数与传递）。
 	// 搜索期间不出 —— 搜索是“找”（全量检索），最近是“回”（刚碰过的几个），两个意图混在一起只会互相干扰。
+	// 日常会话排除在 `deriveRecentSessions` 的 excludeCwd 里（写入侧已挡，这里兜旧文件）。
 	const recent = useMemo(
 		() =>
 			search.trim()
 				? []
-				: deriveRecentSessions(data.primarySessions, lastUsedAt, (session) =>
-						recentProjectLabel(session, t("projects.daily")),
+				: deriveRecentSessions(
+						data.primarySessions,
+						recentSessions,
+						(session) => recentProjectLabel(session, t("projects.daily")),
+						RECENT_LIMIT,
+						{ excludeCwd: isDailyCwd },
 					),
-		[data.primarySessions, lastUsedAt, search, t],
+		[data.primarySessions, recentSessions, search, t],
 	);
 
 	// 左栏唯一滚动容器的边界淡出（底部下沿淡出，原来这里是一条 1px 实线）

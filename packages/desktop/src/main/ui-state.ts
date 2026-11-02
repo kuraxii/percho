@@ -9,6 +9,7 @@ import {
 	clampTerminalScrollback,
 	clampUiFontSize,
 	type PermissionMode,
+	RECENT_SESSION_LIMIT,
 	type Rect,
 	sanitizeTerminalCopyOnSelection,
 	sanitizeTerminalCursorStyle,
@@ -101,6 +102,8 @@ function normalize(parsed: UiStateFileShape): UiState {
 		centerOrbEnabled: typeof parsed.centerOrbEnabled === "boolean" ? parsed.centerOrbEnabled : false,
 		// 置顶列表：脏值（手改文件/旧版本）过滤成非空字符串数组（渲染侧另会忽略未知 id）
 		pinnedSessions: stringArray(parsed.pinnedSessions),
+		// 「最近」列表：去空/去重后按上限裁剪（renderer 每次顶到最前时已裁，这里再裁一次是给脏文件兜底）
+		recentSessions: [...new Set(stringArray(parsed.recentSessions))].slice(0, RECENT_SESSION_LIMIT),
 		sessionPermissionModes: permissionModeMap(parsed.sessionPermissionModes),
 		sidebarCollapsed: typeof parsed.sidebarCollapsed === "boolean" ? parsed.sidebarCollapsed : false,
 		// 侧栏宽度：脏值/越界一律归一化（手改文件、未来改上下界都在这里归一；renderer 只做渲染期夹紧、不回写）

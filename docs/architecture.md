@@ -27,12 +27,15 @@ UI 插件的槽位/区域标识以 shared `ui-plugins.ts` 为单源。新增对�
 | renderer `sessions` | 已加载会话的运行态；GC 可以移出，不决定导航行是否存在 |
 | renderer `projects.allSessions` | 会话目录：磁盘对账 + 本进程新会话写穿；作为导航存在性来源 |
 | renderer `pinnedSessions` | 左栏长期收藏与组内置顶 |
-| renderer `lastUsedAt` | 「最近」列表的排序键：你打开/切到该会话的时刻（不是 `modifiedAt`） |
+| renderer `recentSessions`（落盘） | 左栏「最近」的顺序：你打开/切到该会话的先后（不是 `modifiedAt`），存 id、固定 8 条 |
+| renderer `lastUsedAt` | 内存 LRU 打点（会话卸载/GC 的依据），与「最近」列表解耦 |
 | renderer `transcript` | 历史回放 + 实时事件的 UI 投影，不直接修改 SDK 上下文 |
 
 因此：GC 不应让左栏行消失；只读子代理会话从导航投影中过滤，不能从运行态直接删掉。
 
-左栏「最近」是**派生物**，没有成员表：由 `lib/recent-sessions.ts` 从 `projects.allSessions`（目录 ∪ 内存）按 `lastUsedAt` 取前 8 条，跨项目、不滚动。它接替了已删除的顶栏会话 tab —— 不要为它引入快照持久化，也不要加「加载更多」。
+左栏「最近」= **落盘的顺序表 + 派生的行**：顺序存在 `ui-state.json` 的 `recentSessions`（id 数组，最近在前，固定 8 条），行内容仍从 `projects.allSessions`（目录 ∪ 内存）按 id 查出来。它接替了已删除的顶栏会话 tab —— 不要再加「成员表快照」（`barsSessionsVisible`/`sessionWorkspace` 那套已删）或「加载更多」。
+
+写入侧只有“**用户真的打开了它**”这一个来源（`openSession` / promotion / fork），且共用 `isRecentCandidate` 排除**日常空间**与只读子代理检视会话 —— 日常是随手问几句的草稿区，记进去会把项目会话挤出 8 个格子。删除会话时 `forgetRecentSession` 清掉 id（避免留下点不开的残留）。
 
 会话时间以 header 和 user/assistant 消息时间为准，不用文件 birthtime；合并内存与历史 meta 时，不能用不完整的内存字段覆盖权威时间，造成排序漂移。
 

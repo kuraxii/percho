@@ -1,3 +1,4 @@
+import { RECENT_SESSION_LIMIT } from "@percho/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /** window.pi 的 mock：ui-preferences store 经 getPi() 访问，测试环境无 preload 注入 */
@@ -26,6 +27,7 @@ beforeEach(() => {
 	useUiPreferencesStore.setState({
 		centerOrbEnabled: false,
 		pinnedSessions: [],
+		recentSessions: [],
 		sidebarCollapsed: false,
 		sidebarWidth: 240,
 		expandedGroups: [],
@@ -159,6 +161,61 @@ describe("useUiPreferencesStore", () => {
 			useUiPreferencesStore.getState().setLastCwd(null);
 			expect(useUiPreferencesStore.getState().lastCwd).toBeNull();
 			expect(piMock.saveUiState).toHaveBeenLastCalledWith({ state: { lastCwd: null } });
+		});
+	});
+
+	describe("「最近」列表（recentSessions 落盘）", () => {
+		it("默认空（旧版本 ui-state 无该字段）", async () => {
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual([]);
+
+			piMock.loadUiState.mockResolvedValue({});
+			await useUiPreferencesStore.getState().init();
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual([]);
+		});
+
+		it("init 恢复落盘顺序（最近在前）", async () => {
+			piMock.loadUiState.mockResolvedValue({ recentSessions: ["c", "a", "b"] });
+			await useUiPreferencesStore.getState().init();
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual(["c", "a", "b"]);
+		});
+
+		it("noteRecentSession 顶到最前并落盘", () => {
+			useUiPreferencesStore.getState().noteRecentSession("a");
+			useUiPreferencesStore.getState().noteRecentSession("b");
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual(["b", "a"]);
+			expect(piMock.saveUiState).toHaveBeenLastCalledWith({ state: { recentSessions: ["b", "a"] } });
+		});
+
+		it("已在最前的同 id 不重复写（切会话/点行会高频调）", () => {
+			useUiPreferencesStore.getState().noteRecentSession("a");
+			vi.clearAllMocks();
+			useUiPreferencesStore.getState().noteRecentSession("a");
+			expect(piMock.saveUiState).not.toHaveBeenCalled();
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual(["a"]);
+		});
+
+		it("超过上限时裁掉最旧的", () => {
+			for (let i = 0; i < RECENT_SESSION_LIMIT + 3; i += 1) {
+				useUiPreferencesStore.getState().noteRecentSession(`s${i}`);
+			}
+			const ids = useUiPreferencesStore.getState().recentSessions;
+			expect(ids).toHaveLength(RECENT_SESSION_LIMIT);
+			expect(ids[0]).toBe(`s${RECENT_SESSION_LIMIT + 2}`);
+			expect(ids).not.toContain("s0");
+		});
+
+		it("forgetRecentSession 移除并落盘；不在表里则不写", () => {
+			useUiPreferencesStore.getState().noteRecentSession("a");
+			useUiPreferencesStore.getState().noteRecentSession("b");
+			vi.clearAllMocks();
+
+			useUiPreferencesStore.getState().forgetRecentSession("a");
+			expect(useUiPreferencesStore.getState().recentSessions).toEqual(["b"]);
+			expect(piMock.saveUiState).toHaveBeenLastCalledWith({ state: { recentSessions: ["b"] } });
+
+			vi.clearAllMocks();
+			useUiPreferencesStore.getState().forgetRecentSession("zzz");
+			expect(piMock.saveUiState).not.toHaveBeenCalled();
 		});
 	});
 

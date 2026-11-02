@@ -59,7 +59,8 @@ function resetStore() {
 		permissionModes: {},
 	});
 	useDraftStore.setState({ bySession: {} });
-	// 工作区是独立 store（顶栏展示集的事实源）：逐用例复位，避免成员从上一条用例漏过来
+	// 「最近」列表在 ui-preferences：逐用例复位，避免上一条用例的记录漏过来
+	useUiPreferencesStore.setState({ recentSessions: [] });
 }
 
 beforeEach(() => {
@@ -216,6 +217,26 @@ describe("closeSession", () => {
 		const state = useSessionsStore.getState();
 		expect(state.activeSessionId).toBe("r1");
 		expect(state.cwd).toBe("/proj/a");
+	});
+});
+
+describe("「最近」记录（新建 / 分叉都算刚开的会话）", () => {
+	it("fork 出来的会话顶到「最近」最前", async () => {
+		useSessionsStore.setState({ sessions: [realMeta("r1", "/proj")], activeSessionId: "r1" });
+		piMock.forkSession.mockResolvedValue(realMeta("fork-1", "/proj"));
+
+		await useSessionsStore.getState().forkSession({});
+
+		expect(useUiPreferencesStore.getState().recentSessions).toEqual(["fork-1"]);
+	});
+
+	it("fork 失败不记录", async () => {
+		useSessionsStore.setState({ sessions: [realMeta("r1", "/proj")], activeSessionId: "r1" });
+		piMock.forkSession.mockRejectedValue(new Error("boom"));
+
+		await useSessionsStore.getState().forkSession({});
+
+		expect(useUiPreferencesStore.getState().recentSessions).toEqual([]);
 	});
 });
 

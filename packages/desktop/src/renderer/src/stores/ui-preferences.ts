@@ -8,6 +8,8 @@ import {
 	clampTerminalScrollback,
 	clampUiFontSize,
 	type PermissionMode,
+	pushRecentSession,
+	removeRecentSession,
 	SIDEBAR_DEFAULT_WIDTH,
 	sanitizeTerminalCopyOnSelection,
 	sanitizeTerminalCursorStyle,
@@ -40,8 +42,14 @@ import { useTerminalStore } from "./terminal";
 interface UiPreferencesStore {
 	/** 中央状态动画：任务运行时对话区中央显示放大 orb（z-20 文字层之上 + canvas 一体遮罩压文字）；与 Working/Thinking 行前小 orb 解耦，小 orb 恒显示 */
 	centerOrbEnabled: boolean;
-	/** 置顶会话（id，新置顶在前）：**v8 起就是顶栏胶囊的内容**（左栏只靠图钉标记，不改顺序） */
+	/** 置顶会话（id，新置顶在前）：左栏靠图钉标记，不改顺序 */
 	pinnedSessions: string[];
+	/**
+	 * 左栏「最近」的顺序（sessionId，最近打开的在最前，最多 `RECENT_SESSION_LIMIT` 条）。
+	 * **落盘**：重启后左栏「最近」直接可用，不用等用户重新开过几个会话。
+	 * 只记顺序，不记成员资格：日常会话、已删除/未加载的会话由派生层过滤（`lib/recent-sessions.ts`）。
+	 */
+	recentSessions: string[];
 	/** 按会话记住的权限模式（只存非 default；见 spec/permission-mode.md D7） */
 	sessionPermissionModes: Record<string, PermissionMode>;
 	/** 左侧栏收起（宽 0，彻底藏起；只有顶栏最左按钮能改，默认展开） */
@@ -91,6 +99,10 @@ interface UiPreferencesStore {
 	setCenterOrbEnabled: (enabled: boolean) => void;
 	/** 置顶 / 取消置顶（新置顶排最左） */
 	togglePin: (sessionId: string) => void;
+	/** 把一个会话顶到「最近」最前并落盘（只在顺序真变时写，同位置短路） */
+	noteRecentSession: (sessionId: string) => void;
+	/** 从「最近」里移除（删除会话时清） */
+	forgetRecentSession: (sessionId: string) => void;
 	/** 收起 / 展开左侧栏（宽 240 ↔ 0） */
 	toggleSidebarCollapsed: () => void;
 	/**
@@ -146,6 +158,7 @@ function persistPatch(patch: Partial<UiState>): void {
 export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 	centerOrbEnabled: false,
 	pinnedSessions: [],
+	recentSessions: [],
 	sessionPermissionModes: {},
 	sidebarCollapsed: false,
 	sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
@@ -177,6 +190,7 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 		set({
 			centerOrbEnabled: saved?.centerOrbEnabled ?? false,
 			pinnedSessions: saved?.pinnedSessions ?? [],
+			recentSessions: saved?.recentSessions ?? [],
 			sessionPermissionModes: saved?.sessionPermissionModes ?? {},
 			sidebarCollapsed: saved?.sidebarCollapsed ?? false,
 			sidebarWidth: clampSidebarWidth(saved?.sidebarWidth),
@@ -341,6 +355,30 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 		const next = current.filter((id) => id !== sessionId);
 		set({ pinnedSessions: next });
 		persistPatch({ pinnedSessions: next });
+	},
+
+	/**
+	 * 把一个会话顶到「最近」最前（打开/切到它时调）。
+	 *
+	 * 落盘，但**只在顺序真的变时才写**（同位置短路）：切会话/打开全走这里，否则每点一次都是一次 IPC + 原子写。
+	 * 常日空间不往这里记 —— 日常会话不进「最近」（见 `lib/recent-sessions.ts` 的排除规则），
+	 * 记了只会占掉一个给项目会话的位置。
+	 */
+	noteRecentSession: (sessionId) => {
+		const current = get().recentSessions;
+		if (current[0] === sessionId) return;
+		const next = pushRecentSession(current, sessionId);
+		set({ recentSessions: next });
+		persistPatch({ recentSessions: next });
+	},
+
+	/** 从「最近」里移除（删除会话时清，避免留下点不开的残留 id） */
+	forgetRecentSession: (sessionId) => {
+		const current = get().recentSessions;
+		const next = removeRecentSession(current, sessionId);
+		if (next.length === current.length) return;
+		set({ recentSessions: next });
+		persistPatch({ recentSessions: next });
 	},
 
 	rememberPermissionMode: (sessionId, mode) => {

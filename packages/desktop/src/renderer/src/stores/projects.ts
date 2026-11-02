@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { getPi } from "../api";
 import { initDailyDir, isDailyCwd } from "../lib/daily";
 import { pathLastSegment } from "../lib/path-display";
+import { isRecentCandidate } from "../lib/recent-sessions";
 import { useChannelSubscriptionsStore } from "./channel-subscriptions";
 import { useSessionsStore } from "./sessions";
 import { useSubagentReturnStore } from "./subagent-return";
@@ -151,8 +152,8 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => {
 			await getPi().deleteSession({ sessionId: session.sessionId, sessionFile: session.sessionFile });
 			// 置顶列表清理：会话没了就没人能取消置顶，留着会变成永久残留 id
 			useUiPreferencesStore.getState().unpin(session.sessionId);
-			// D7：权限模式记录同理（与置顶并列；卸载/关会话**不**清，那是「记住」的意义）
-			useUiPreferencesStore.getState().forgetPermissionMode(session.sessionId);
+			// 「最近」同理（删除的会话不能留在表里）
+			useUiPreferencesStore.getState().forgetRecentSession(session.sessionId);
 			// spec D4：会话被删则与它相关的关系失效 —— 作为父（子会话的返回箭头）与作为子（自己的箭头）都清。
 			// **只有删除**清：GC 卸载要靠 parentFile 重开父会话，清了箭头就没了（两者不能混用）。
 			useSubagentReturnStore.getState().forgetChildrenOf(session.sessionId);
@@ -188,16 +189,31 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => {
 		openSession: async (session) => {
 			const sessionsState = useSessionsStore.getState();
 			const opened = sessionsState.sessions.find((s) => s.sessionId === session.sessionId);
+			// 「最近」记录：用户的这个点击。放在实际切换**之前**没意义（两者都同步/异步一致），
+			// 但必须放在失败分支之外 —— 打开失败不该把会话顶进「最近」。
 			if (opened) {
 				// 已加载：同步切（这次点击就是最新意图）
 				sessionsState.switchSession(opened.sessionId);
+				noteRecent(opened);
 				return;
 			}
 			// 未加载：从历史打开。失败已由共享 open 链 toast；迟到（latest:false）不抢焦点
-			await sessionsState.openFromHistory(session.sessionFile ?? "");
+			const result = await sessionsState.openFromHistory(session.sessionFile ?? "");
+			if (result.ok) noteRecent(result.meta);
 		},
 	};
 });
+
+/**
+ * 记一次「最近打开」：用户点了这一行且真的开起来了。
+ *
+ * 判据与派生层共用 `isRecentCandidate`（排除日常空间与只读子代理会话），
+ * 所以写入侧和渲染侧不会各写一份规则后漂移。
+ */
+function noteRecent(session: SessionMeta): void {
+	if (!isRecentCandidate(session)) return;
+	useUiPreferencesStore.getState().noteRecentSession(session.sessionId);
+}
 
 /**
  * 目录写穿：把内存里目录还没有的会话补进去（**只补缺、不覆盖**——磁盘权威的最小改动）。

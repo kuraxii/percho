@@ -32,6 +32,13 @@ export interface UiState {
 	/** 置顶会话 id（新置顶在前；只存 app 本地 ui-state.json，不写会话文件、不跨设备同步；已删除的会话 id 由写侧清理） */
 	pinnedSessions: string[];
 	/**
+	 * **左栏「最近」的顺序**（sessionId，最近打开的在最前，最多 `RECENT_SESSION_LIMIT` 条）：
+	 * 只存 app 本地 ui-state.json（与 `lastCwd` 同类，不写会话文件、不跨设备同步）。
+	 * 存的是 id 而不是文件路径：会话文件路径会随目录迁移变，id 不会。
+	 * 已删除的会话由写侧 `removeRecentSession` 清；读回时按上限裁剪（脏文件不会越用越长）。
+	 */
+	recentSessions: string[];
+	/**
 	 * **按会话记住的权限模式**（只存非 `default` 的项，切回默认就删键）。
 	 * 只存 app 本地 ui-state.json，**不写进 pi 的会话 jsonl**（那是 SDK 文件格式）；新会话/fork 仍从 default 起步。
 	 */
