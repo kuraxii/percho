@@ -183,7 +183,7 @@ declare module "@percho/plugin-api" {
 		useUiStore: unknown;
 		useProjectsStore: unknown;
 		useSettingsStore: unknown;
-		/** 应用级 UI 偏好（ui-state.json 持久化）：barSessionsVisible / sidebarCollapsed / centerOrbEnabled 等 */
+		/** 应用级 UI 偏好（ui-state.json 持久化）：sidebarWidth / sidebarCollapsed / centerOrbEnabled / 字号 等 */
 		useUiPreferencesStore: unknown;
 	};
 	// 具名便捷导出复用分组声明，不另写一套props/签名。

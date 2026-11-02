@@ -3,9 +3,7 @@ import { create } from "zustand";
 import { getPi } from "../api";
 import { initDailyDir, isDailyCwd } from "../lib/daily";
 import { pathLastSegment } from "../lib/path-display";
-import { isPrimaryNavigationSession } from "../lib/session-visibility";
 import { useChannelSubscriptionsStore } from "./channel-subscriptions";
-import { useSessionWorkspaceStore } from "./session-workspace";
 import { useSessionsStore } from "./sessions";
 import { useSubagentReturnStore } from "./subagent-return";
 import { useUiPreferencesStore } from "./ui-preferences";
@@ -155,8 +153,6 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => {
 			useUiPreferencesStore.getState().unpin(session.sessionId);
 			// D7：权限模式记录同理（与置顶并列；卸载/关会话**不**清，那是「记住」的意义）
 			useUiPreferencesStore.getState().forgetPermissionMode(session.sessionId);
-			// 工作区成员同理清理（**只有删除**会顺带移出；关会话/卸载不自动移出，见 spec）
-			useSessionWorkspaceStore.getState().removeMember(session.sessionId);
 			// spec D4：会话被删则与它相关的关系失效 —— 作为父（子会话的返回箭头）与作为子（自己的箭头）都清。
 			// **只有删除**清：GC 卸载要靠 parentFile 重开父会话，清了箭头就没了（两者不能混用）。
 			useSubagentReturnStore.getState().forgetChildrenOf(session.sessionId);
@@ -191,29 +187,14 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => {
 
 		openSession: async (session) => {
 			const sessionsState = useSessionsStore.getState();
-			// 导航前先取锚点：新成员要插在「上一刻在看的成员」右侧，而导航会把当前改成新成员。
-			// 锚点规则由 store 一处定义（`anchorFile()`：当前成员 → 最近看过的成员），避免这里漏掉
-			// 「用户停在新会话页，activeFile 为 null」的情形（会退化成追加末尾）。
-			// 但**成员只在真的打开成功后才入表** —— 失败的 open（文件已删/后端拒绝）若先入表，
-			// 会留下一个点不开的假胶囊，甚至占住 activeFile（spec：失败的 open 不加入）。
-			const anchorFile = useSessionWorkspaceStore.getState().anchorFile();
-			const record = (meta: SessionMeta, activate: boolean): void => {
-				if (!isPrimaryNavigationSession(meta)) return; // 只读子代理检视不进工作区
-				useSessionWorkspaceStore
-					.getState()
-					.addMember({ file: meta.sessionFile, sessionId: meta.sessionId }, { anchorFile, activate });
-			};
-
 			const opened = sessionsState.sessions.find((s) => s.sessionId === session.sessionId);
 			if (opened) {
-				// 已加载：同步切（这次点击就是最新意图），再入表并激活
+				// 已加载：同步切（这次点击就是最新意图）
 				sessionsState.switchSession(opened.sessionId);
-				record(opened, true);
 				return;
 			}
-			const result = await sessionsState.openFromHistory(session.sessionFile ?? "");
-			// 没开起来 → 不入表（失败已由共享 open 链 toast 过）；迟到（latest:false）只入表、不抢 activeFile
-			if (result.ok) record(result.meta, result.latest);
+			// 未加载：从历史打开。失败已由共享 open 链 toast；迟到（latest:false）不抢焦点
+			await sessionsState.openFromHistory(session.sessionFile ?? "");
 		},
 	};
 });

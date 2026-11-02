@@ -16,7 +16,7 @@ export interface ContextMenuItem {
 }
 
 /**
- * 通用右键菜单（会话胶囊 / 轮末文件行 / 左侧栏会话行共用）：portal 到 body（不被 tabbar 的 overflow 裁剪），
+ * 通用右键菜单（轮末文件行 / 左侧栏会话行共用）：portal 到 body（不被容器的 overflow 裁剪），
  * 锚在触发元素下沿左对齐，超右缘左翻、下方不足上翻（定位规则在 place-menu）。
  * 关闭：点浮层外（pointerdown 捕获）/ Esc / 选中任一项 / 滚动与窗口尺寸变化（防浮层脱锚）。
  * 外观：`rounded-xl border border-border bg-surface p-1 shadow-pop` 的有边框卡片（与左栏共用一套，

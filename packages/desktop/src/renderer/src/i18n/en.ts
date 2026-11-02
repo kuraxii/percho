@@ -19,23 +19,12 @@ export const en: Messages = {
 		desc: "Any task that is currently running will be terminated.",
 		confirm: "Quit",
 	},
-	tabbar: {
-		untitled: "New session",
-		settings: "Settings",
-		close: "Close session (keep on disk)",
-		removeFromWorkspace: "Remove from workspace (session stays open)",
+	/** Session action labels (context menu + rename popover); formerly `tabbar.*` */
+	sessionAction: {
 		rename: "Rename",
 		renamePlaceholder: "Session name",
 		pin: "Pin",
 		unpin: "Unpin",
-		sessionList: "Session list",
-	},
-	rail: {
-		ariaLabel:
-			"Session rail: use the arrow keys to move between entries; press Delete or Backspace to remove the current entry from the workspace (the session stays open)",
-	},
-	floatingList: {
-		title: "Sessions",
 	},
 	update: {
 		checkForUpdates: "Check for updates",
@@ -335,6 +324,8 @@ export const en: Messages = {
 			"This removes the project from Percho; it has no sessions, and the project files on your computer stay untouched.",
 		searchEmpty: "No matching sessions",
 		noSessions: "No sessions",
+		/** Sidebar "Recent" section (replaces the top-bar tabs: fixed 8, cross-project, last-opened order) */
+		recent: "Recent",
 		/** Session-tree node chevron: collapse the subtree (in-memory; hidden while search force-expands) */
 		collapseNode: "Collapse subtree",
 		expandNode: "Expand subtree",
@@ -433,9 +424,6 @@ export const en: Messages = {
 		channelWatch: "Cross-session channel collaboration (channel-watch)",
 		channelWatchHint:
 			"After a session subscribes to a channel it watches .local/agent-work/channel/<topic>/ for file updates; writes from another session wake this session to pick them up (per the HANDOFF.md protocol). Subscriptions persist via appendEntry and restore on session reopen; built-in loop protection. On by default, fully effective for trusted projects.",
-		topBar: "Show sessions in the top bar",
-		topBarHint:
-			"The top bar is always there (window dragging, sidebar toggle, current changes). Turn this off and it stops showing the temporary-workspace pills — every session stays in the left sidebar, and the workspace is cleared and stops being recorded.",
 		centerOrb: "Centered status animation",
 		centerOrbHint:
 			"While a task is running, shows an enlarged status animation at the center of the conversation area (above the text, with a translucent scrim dimming whatever is behind it). Only controls the centered animation — the small orb before the Working/Thinking row always stays.",

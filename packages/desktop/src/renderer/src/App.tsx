@@ -8,7 +8,7 @@ import { SubagentBackButton } from "./components/chat/SubagentBackButton";
 import { TodoPanel } from "./components/chat/TodoPanel";
 import { DiffSidebar } from "./components/diff/DiffSidebar";
 import { DockSlot } from "./components/session/DockSlot";
-import { SessionTabBar } from "./components/session/SessionTabBar";
+import { TopBar } from "./components/session/TopBar";
 import { TrustDialog } from "./components/session/TrustDialog";
 import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { Sidebar } from "./components/sidebar/Sidebar";
@@ -28,7 +28,6 @@ import {
 	invalidateChannelSubscriptionQueries,
 	syncActiveSession,
 } from "./stores/channel-subscriptions";
-import { restoreSessionWorkspace } from "./stores/session-workspace-restore";
 import { useSessionsStore } from "./stores/sessions";
 import { useHasParentRelation } from "./stores/subagent-return";
 import { useTerminalStore } from "./stores/terminal";
@@ -95,9 +94,6 @@ export default function App() {
 		// v10：**不再恢复上次打开的会话**（启动纯空 = 新会话页，与 pi 原生 / Codex 一致）；
 		// 历史全在左栏，点一下才按需加载
 		void Promise.allSettled([useSessionsStore.getState().loadModels()]).then(() => finishSplash());
-		// 临时会话工作区恢复：fire-and-forget，不阻塞开屏（splash 仍由上面的 loadModels 链收场）。
-		// 它会自己等历史目录对账；只按需加载 activeFile 一条，且不抢用户已做出的导航
-		void restoreSessionWorkspace();
 		initUpdateStore();
 		// 退出确认（Windows）：挂载即向 main 声明接管，点 ✕ 才会拦下来弹窗
 		initAppQuit();
@@ -126,11 +122,11 @@ export default function App() {
 			{/* 背景贡献层：与自定义背景图同层同规则（z-0，界面默认不透明时不可见），内容列（z-10）之前 */}
 			<RegionHost region={UI_REGIONS.AppBackground} />
 			<div className="relative z-10 flex h-full flex-col">
-				{/* 顶栏常驻（v9）：它承担窗口拖动 / 左栏开合 / 变更侧栏入口，不再整条隐藏；
-				   设置里的开关只控制「是否显示置顶会话胶囊」（见 SessionTabBar）。
+				{/* 顶栏常驻：承担窗口拖动 / 左栏开合 / 变更侧栏入口。中间的会话 tab 条已移除
+				   （工作集由左栏「最近」表达，见 components/sidebar/RecentSection.tsx）。
 				   终端最大化不收起顶栏：最大化只占满聊天区（vscode 语义），窗口框仍可见。 */}
 				<div className="h-12 shrink-0 overflow-hidden">
-					<SessionTabBar />
+					<TopBar />
 				</div>
 				<div className="relative flex min-h-0 flex-1 overflow-hidden">
 					{/* 侧栏直接作为 flex 子项（bf58bb0 之前的布局）：被默认 stretch 拉满高，resize 把手满高可拖。

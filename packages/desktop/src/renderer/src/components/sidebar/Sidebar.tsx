@@ -1,12 +1,14 @@
 import { type CSSProperties, useCallback, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { selectActiveCwd } from "../../lib/active-cwd";
+import { deriveRecentSessions, recentProjectLabel } from "../../lib/recent-sessions";
 import { deriveSidebarNavigation, toggleCollapsedNode } from "../../lib/sidebar-groups";
 import { useEdgeFade } from "../../lib/use-edge-fade";
 import { useProjectsStore } from "../../stores/projects";
 import { useSessionsStore } from "../../stores/sessions";
 import { useUiPreferencesStore } from "../../stores/ui-preferences";
 import { ProjectSection } from "./ProjectSection";
+import { RecentSection } from "./RecentSection";
 import { SidebarFooter } from "./SidebarFooter";
 import { SidebarGroup } from "./SidebarGroup";
 import { SidebarHeader } from "./SidebarHeader";
@@ -50,6 +52,8 @@ export function Sidebar() {
 	}, []);
 	// 内存会话（含刚创建还没进历史的真实会话与只读子会话）：与磁盘历史合并成左栏数据源（spec D2）
 	const memorySessions = useSessionsStore((s) => s.sessions);
+	// 「最近」的排序键：最近被打开/切换的时刻（不是 modifiedAt，后台 agent 不许顶乱顺序）
+	const lastUsedAt = useSessionsStore((s) => s.lastUsedAt);
 	// 默认展开组使用同一当前目录规则，不依赖外部seed的兼容镜像。
 	const activeCwd = useSessionsStore(selectActiveCwd);
 
@@ -87,6 +91,18 @@ export function Sidebar() {
 	const batching = useSidebarBatching({ search, defaults: data.defaultExpandedKeys });
 	const empty = data.daily === null && data.projects.length === 0;
 
+	// 「最近」：跨项目、固定 8 条、按最近打开排序（纯函数层派生，本组件只取数与传递）。
+	// 搜索期间不出 —— 搜索是“找”（全量检索），最近是“回”（刚碰过的几个），两个意图混在一起只会互相干扰。
+	const recent = useMemo(
+		() =>
+			search.trim()
+				? []
+				: deriveRecentSessions(data.primarySessions, lastUsedAt, (session) =>
+						recentProjectLabel(session, t("projects.daily")),
+					),
+		[data.primarySessions, lastUsedAt, search, t],
+	);
+
 	// 左栏唯一滚动容器的边界淡出（底部下沿淡出，原来这里是一条 1px 实线）
 	const sidebarScrollRef = useRef<HTMLDivElement>(null);
 	useEdgeFade(sidebarScrollRef);
@@ -118,6 +134,7 @@ export function Sidebar() {
 							onToggleCollapse={toggleNodeCollapse}
 						/>
 					)}
+					<RecentSection recent={recent} activeSessionId={activeSessionId} />
 					<ProjectSection
 						projects={data.projects}
 						activeSessionId={activeSessionId}

@@ -98,10 +98,15 @@ export function sessionMenuItems(
 	},
 ): ContextMenuItem[] {
 	return [
-		{ key: "rename", label: t("tabbar.rename"), icon: <PencilIcon size={13} />, onSelect: options.onRename },
+		{
+			key: "rename",
+			label: t("sessionAction.rename"),
+			icon: <PencilIcon size={13} />,
+			onSelect: options.onRename,
+		},
 		{
 			key: "pin",
-			label: options.pinned ? t("tabbar.unpin") : t("tabbar.pin"),
+			label: options.pinned ? t("sessionAction.unpin") : t("sessionAction.pin"),
 			icon: <PinIcon size={13} />,
 			onSelect: () => toggleSessionPin(options.sessionId),
 		},

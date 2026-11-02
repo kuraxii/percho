@@ -96,100 +96,21 @@ describe("expandedGroupsTouched 迁移与读写（空数组不再兼任「未操
 	});
 });
 
-describe("sessionWorkspace 白名单（临时会话工作区）", () => {
-	it("默认：工作区空（旧文件无这些字段）", async () => {
-		writeFileSync(file(), "{}");
-		const state = await loadUiState();
-		expect(state?.sessionWorkspace).toEqual({ files: [], activeFile: null });
-		expect(state?.barSessionsVisible).toBe(true);
-	});
-
-	it("清洗 files：trim、去空、去重保序；activeFile 必须 ∈ files（否则 null）", async () => {
-		writeFileSync(
-			file(),
-			JSON.stringify({
-				sessionWorkspace: {
-					files: [" /a.jsonl ", "", "/a.jsonl", 7, null, "/b.jsonl"],
-					activeFile: "/b.jsonl",
-				},
-			}),
-		);
-		const state = await loadUiState();
-		expect(state?.sessionWorkspace).toEqual({ files: ["/a.jsonl", "/b.jsonl"], activeFile: "/b.jsonl" });
-
-		writeFileSync(
-			file(),
-			JSON.stringify({ sessionWorkspace: { files: ["/a.jsonl"], activeFile: "/gone.jsonl" } }),
-		);
-		expect((await loadUiState())?.sessionWorkspace).toEqual({ files: ["/a.jsonl"], activeFile: null });
-	});
-
-	it("脏快照（非对象/非数组/字符串元素）一律落成空，不炸启动", async () => {
-		for (const raw of [
-			'{"sessionWorkspace":"x"}',
-			'{"sessionWorkspace":[]}',
-			'{"sessionWorkspace":{"files":"x","activeFile":3}}',
-			'{"sessionWorkspace":null}',
-		]) {
-			writeFileSync(file(), raw);
-			expect((await loadUiState())?.sessionWorkspace, raw).toEqual({ files: [], activeFile: null });
-		}
-	});
-
-	it("顶栏显示关掉时强制清空（即使文件里留着上次的快照）", async () => {
+describe("已移除的会话工作区字段（顶栏 tab 条删除后）", () => {
+	it("旧文件里的 sessionWorkspace / barSessionsVisible 被忽略，不炸启动", async () => {
 		writeFileSync(
 			file(),
 			JSON.stringify({
 				barSessionsVisible: false,
 				sessionWorkspace: { files: ["/a.jsonl"], activeFile: "/a.jsonl" },
-			}),
-		);
-		expect((await loadUiState())?.sessionWorkspace).toEqual({ files: [], activeFile: null });
-	});
-
-	it("旧用户 barSessionsVisible:false → 保持关 + 工作区空", async () => {
-		writeFileSync(
-			file(),
-			JSON.stringify({
-				barSessionsVisible: false,
-				sessionWorkspace: { files: ["/a.jsonl"], activeFile: "/a.jsonl" },
+				pinnedSessions: ["s1"],
 			}),
 		);
 		const state = await loadUiState();
-		expect(state?.barSessionsVisible).toBe(false);
-		expect(state?.sessionWorkspace).toEqual({ files: [], activeFile: null });
-	});
-
-	it("已废弃的 sessionRailEnabled 字段被忽略，不影响快照保留", async () => {
-		writeFileSync(
-			file(),
-			JSON.stringify({
-				barSessionsVisible: true,
-				sessionRailEnabled: false,
-				sessionWorkspace: { files: ["/a.jsonl", "/b.jsonl"], activeFile: "/a.jsonl" },
-			}),
-		);
-		expect((await loadUiState())?.sessionWorkspace).toEqual({
-			files: ["/a.jsonl", "/b.jsonl"],
-			activeFile: "/a.jsonl",
-		});
-	});
-
-	it("升级不迁移：旧的 pinnedSessions 不会变成工作区成员（置顶仍是独立的长期标记）", async () => {
-		writeFileSync(file(), JSON.stringify({ pinnedSessions: ["s1", "s2"], barSessionsVisible: true }));
-		const state = await loadUiState();
-		expect(state?.pinnedSessions).toEqual(["s1", "s2"]);
-		expect(state?.sessionWorkspace).toEqual({ files: [], activeFile: null });
-	});
-
-	it("同一次保存补丁可同时改开关与快照（读回一致）", async () => {
-		await saveUiState({
-			barSessionsVisible: true,
-			sessionWorkspace: { files: ["/a.jsonl", "/b.jsonl"], activeFile: "/b.jsonl" },
-		});
-		const state = await loadUiState();
-		expect(state?.barSessionsVisible).toBe(true);
-		expect(state?.sessionWorkspace).toEqual({ files: ["/a.jsonl", "/b.jsonl"], activeFile: "/b.jsonl" });
+		// 未知字段不落进 UiState；已知字段照常生效
+		expect(state).not.toHaveProperty("sessionWorkspace");
+		expect(state).not.toHaveProperty("barSessionsVisible");
+		expect(state?.pinnedSessions).toEqual(["s1"]);
 	});
 });
 

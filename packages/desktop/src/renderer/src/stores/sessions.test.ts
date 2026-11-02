@@ -28,7 +28,6 @@ vi.mock("../api", () => ({ getPi: () => piMock }));
 import { selectActiveCwd } from "../lib/active-cwd";
 import { NEW_SESSION_DRAFT_KEY, useDraftStore } from "./drafts";
 import { clearSessionHistory, isHistoryReady, retrySessionHistory } from "./session-history";
-import { useSessionWorkspaceStore } from "./session-workspace";
 import { partitionSessionsByPin, useSessionsStore } from "./sessions";
 import { useToastsStore } from "./toasts";
 import { useTranscriptStore } from "./transcript";
@@ -61,7 +60,6 @@ function resetStore() {
 	});
 	useDraftStore.setState({ bySession: {} });
 	// 工作区是独立 store（顶栏展示集的事实源）：逐用例复位，避免成员从上一条用例漏过来
-	useSessionWorkspaceStore.setState({ members: [], activeFile: null, epoch: 0 });
 }
 
 beforeEach(() => {
@@ -922,14 +920,12 @@ describe("GC close 在途的选择竞态（spec D5）", () => {
 		await vi.waitFor(() => expect(piMock.openSession).toHaveBeenCalledTimes(1));
 		useSessionsStore.getState().switchSession("c");
 		useSessionsStore.setState({ cwd: "/stale/current-c" });
-		const members = useSessionWorkspaceStore.getState().members;
 		reopening.resolve(realMeta("b", "/new-b"));
 
 		expect(await unloading).toEqual({ closed: false });
 		expect(useSessionsStore.getState().activeSessionId).toBe("c");
 		expect(useSessionsStore.getState().cwd).toBe("/p");
 		expect(useSessionsStore.getState().cwd).toBe(selectActiveCwd(useSessionsStore.getState()));
-		expect(useSessionWorkspaceStore.getState().members).toBe(members);
 	});
 });
 
@@ -1586,108 +1582,5 @@ describe("不变式：新会话页（active === null）必须有可用 draft", (
 		expect(state.newSessionDraft).not.toBeNull();
 		// 顶部新会话以点击时正在查看的 B 会话为模板。
 		expect(state.newSessionDraft?.cwd).toBe("/proj/b");
-	});
-});
-
-// ---------------------------------------------------------------------------
-// 临时会话工作区接线（阶段 2）：成员只在「用户打开的入口」加入；
-// 切会话与所有内部路径（GC 重建、冷启动恢复、只读检视）都不许擅自加入。
-// ---------------------------------------------------------------------------
-describe("工作区接线", () => {
-	const memberIds = () => useSessionWorkspaceStore.getState().members.map((m) => m.sessionId);
-	const activeFile = () => useSessionWorkspaceStore.getState().activeFile;
-
-	it("promotion 成功：新会话记入工作区并成为当前成员（不种置顶）", async () => {
-		piMock.createSession.mockResolvedValue(realMeta("new-1", "/p"));
-		useSessionsStore.setState({ cwd: "/p" });
-		useSessionsStore.getState().activateNewSessionDraft();
-
-		expect(await useSessionsStore.getState().createSession()).toBe("new-1");
-
-		expect(memberIds()).toEqual(["new-1"]);
-		expect(activeFile()).toBe("/tmp/new-1.jsonl");
-		// 置顶是另一套长期标记：工作区成员绝不能顺带进 pinnedSessions
-		expect(useUiPreferencesStore.getState().pinnedSessions).toEqual([]);
-	});
-
-	it("promotion 失败：不记成员（失败的动作不产生工作区成员）", async () => {
-		piMock.createSession.mockRejectedValue(new Error("boom"));
-		useSessionsStore.setState({ cwd: "/p" });
-		useSessionsStore.getState().activateNewSessionDraft();
-
-		expect(await useSessionsStore.getState().createSession()).toBeNull();
-		expect(memberIds()).toEqual([]);
-	});
-
-	it("迟到 promotion：仍记入工作区，但不抢 activeFile", async () => {
-		const created = deferred<SessionMeta>();
-		piMock.createSession.mockImplementationOnce(() => created.promise);
-		useSessionsStore.setState({ sessions: [realMeta("other", "/p")], activeSessionId: "other", cwd: "/p" });
-		useSessionsStore.getState().activateNewSessionDraft();
-		const pending = useSessionsStore.getState().createSession();
-
-		// 创建在途：用户切到别的会话（领新号，旧结果作废）
-		useSessionsStore.getState().switchSession("other");
-		created.resolve(realMeta("late-1", "/p"));
-		expect(await pending).toBe("late-1");
-
-		expect(memberIds()).toEqual(["late-1"]);
-		expect(activeFile()).toBeNull(); // 用户当前看的 other 不是成员 → 空态（重启回新会话页）
-	});
-
-	it("fork 成功：分叉出的会话记入工作区", async () => {
-		piMock.forkSession.mockResolvedValue(realMeta("fork-1", "/p"));
-		useSessionsStore.setState({ sessions: [realMeta("r1", "/p")], activeSessionId: "r1" });
-
-		expect(await useSessionsStore.getState().forkSession({ text: "hello" })).toBe("fork-1");
-		expect(memberIds()).toEqual(["fork-1"]);
-	});
-
-	it("× 出去的会话：GC 在途重建也不会把它带回工作区", async () => {
-		const closing = deferred<{ closed: boolean }>();
-		piMock.closeSession.mockImplementationOnce(() => closing.promise);
-		piMock.openSession.mockResolvedValue(realMeta("r2", "/p"));
-		useSessionsStore.setState({ sessions: [realMeta("r2", "/p")], activeSessionId: "r2" });
-		useSessionWorkspaceStore.getState().addMember({ file: "/tmp/r2.jsonl", sessionId: "r2" });
-
-		const pending = useSessionsStore.getState().closeSession("r2", "gc");
-		// 关闭在途：用户把 r2 从工作区 × 掉（还停在它上面 → 回新会话页）
-		expect(useSessionWorkspaceStore.getState().removeMember("r2")).toEqual({
-			removed: { file: "/tmp/r2.jsonl", sessionId: "r2" },
-			wasActive: true,
-			next: null,
-		});
-		closing.resolve({ closed: true });
-		expect(await pending).toEqual({ closed: false }); // GC 竞态：后端会话被重建，UI 保留
-
-		expect(useSessionsStore.getState().sessions.map((s) => s.sessionId)).toEqual(["r2"]);
-		expect(memberIds()).toEqual([]);
-		expect(activeFile()).toBeNull();
-	});
-
-	it("activeFile 跟随当前会话：切到非成员落 null，切回成员再指回来", async () => {
-		piMock.openSession.mockResolvedValue(realMeta("sub-1", "/p"));
-		useSessionWorkspaceStore.getState().addMember({ file: "/tmp/m1.jsonl", sessionId: "m1" });
-		useSessionsStore.setState({ sessions: [realMeta("m1", "/p"), realMeta("sub-1", "/p")] });
-		useSessionsStore.getState().switchSession("m1");
-		expect(activeFile()).toBe("/tmp/m1.jsonl");
-
-		// 只读子代理检视：不是工作区成员（也不该是）→ 当前没有工作区会话
-		useSessionsStore.getState().switchSession("sub-1");
-		expect(activeFile()).toBeNull();
-		useSessionWorkspaceStore.getState().setActive(null);
-		expect(memberIds()).toEqual(["m1"]); // 指针归零不影响成员
-
-		useSessionsStore.getState().switchSession("m1");
-		expect(activeFile()).toBe("/tmp/m1.jsonl");
-	});
-
-	it("openFromHistory（内部/只读入口）不加入工作区：成员只由用户入口决定", async () => {
-		piMock.openSession.mockResolvedValue(realMeta("h1", "/p"));
-		await useSessionsStore.getState().openFromHistory("/tmp/h1.jsonl");
-
-		expect(useSessionsStore.getState().activeSessionId).toBe("h1");
-		expect(memberIds()).toEqual([]);
-		expect(activeFile()).toBeNull();
 	});
 });

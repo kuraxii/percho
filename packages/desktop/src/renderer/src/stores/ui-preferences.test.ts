@@ -26,7 +26,6 @@ beforeEach(() => {
 	useUiPreferencesStore.setState({
 		centerOrbEnabled: false,
 		pinnedSessions: [],
-		barSessionsVisible: true,
 		sidebarCollapsed: false,
 		sidebarWidth: 240,
 		expandedGroups: [],
@@ -66,47 +65,30 @@ describe("useUiPreferencesStore", () => {
 	});
 
 	describe("左侧栏", () => {
-		it("默认展开 + 显示顶栏（旧版本 ui-state 无这些字段）", async () => {
+		it("默认展开（旧版本 ui-state 无这些字段）", async () => {
 			piMock.loadUiState.mockResolvedValue({});
 			await useUiPreferencesStore.getState().init();
 			const state = useUiPreferencesStore.getState();
-			expect(state.barSessionsVisible).toBe(true);
 			expect(state.sidebarCollapsed).toBe(false);
 			expect(state.expandedGroups).toEqual([]);
 			expect(state.pinnedProjects).toEqual([]);
 		});
 
-		it("init 恢复收起态 / 顶栏显隐 / 展开分组 / 置顶项目", async () => {
+		it("init 恢复收起态 / 展开分组 / 置顶项目", async () => {
 			piMock.loadUiState.mockResolvedValue({
-				barSessionsVisible: false,
 				sidebarCollapsed: true,
 				expandedGroups: ["__projects__", "/work/alpha"],
 				pinnedProjects: ["/work/alpha"],
 			});
 			await useUiPreferencesStore.getState().init();
 			const state = useUiPreferencesStore.getState();
-			expect(state.barSessionsVisible).toBe(false);
 			expect(state.sidebarCollapsed).toBe(true);
 			expect(state.expandedGroups).toEqual(["__projects__", "/work/alpha"]);
 			expect(state.pinnedProjects).toEqual(["/work/alpha"]);
 		});
 
-		it("默认：顶栏开（旧文件缺字段）", async () => {
-			piMock.loadUiState.mockResolvedValue({});
-			await useUiPreferencesStore.getState().init();
-			expect(useUiPreferencesStore.getState().barSessionsVisible).toBe(true);
-		});
-
-		it("init 恢复顶栏开关", async () => {
-			piMock.loadUiState.mockResolvedValue({ barSessionsVisible: false });
-			await useUiPreferencesStore.getState().init();
-			expect(useUiPreferencesStore.getState().barSessionsVisible).toBe(false);
-		});
-
-		it("四项各自落盘补丁（顶栏显隐 / 收起 / 展开分组 / 项目置顶）", () => {
+		it("三项各自落盘补丁（收起 / 展开分组 / 项目置顶）", () => {
 			const store = useUiPreferencesStore.getState();
-			store.setBarSessionsVisible(false);
-			expect(piMock.saveUiState).toHaveBeenLastCalledWith({ state: { barSessionsVisible: false } });
 
 			store.toggleSidebarCollapsed();
 			expect(useUiPreferencesStore.getState().sidebarCollapsed).toBe(true);

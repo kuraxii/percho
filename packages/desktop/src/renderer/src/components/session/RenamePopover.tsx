@@ -102,7 +102,7 @@ export function RenamePopover({
 				onKeyDown={(e) => {
 					if (e.key === "Enter") finish(true);
 				}}
-				placeholder={t("tabbar.renamePlaceholder")}
+				placeholder={t("sessionAction.renamePlaceholder")}
 				className="w-full rounded-lg bg-hover px-2.5 py-[7px] text-ui-13 text-ink placeholder:text-ink-faint focus:outline-none"
 			/>
 			<div className="mt-2 flex justify-end gap-0.5">
@@ -118,7 +118,7 @@ export function RenamePopover({
 					className="rounded-lg px-2 py-1 text-ui-13 font-medium text-ink transition-colors hover:bg-hover"
 					onClick={() => finish(true)}
 				>
-					{t("tabbar.rename")}
+					{t("sessionAction.rename")}
 				</button>
 			</div>
 		</div>,

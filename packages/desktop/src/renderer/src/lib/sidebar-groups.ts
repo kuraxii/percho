@@ -61,6 +61,11 @@ export type SidebarGroupsResult = {
 	projects: SidebarProjectEntry[];
 	/** 无用户记录时的默认展开集（= 默认推断结果），供 useExpandedGroups 在用户首次开合时当起点 */
 	defaultExpandedKeys: string[];
+	/**
+	 * 进导航的主会话全集（已过只读子会话过滤），**顺序同输入**。
+	 * 「最近」列表的输入源：它需要跨 cwd 的全集，但不愿意为了它再跑一遍合并/过滤（会分叉出第二份装配逻辑）。
+	 */
+	primarySessions: SessionMeta[];
 };
 
 /**
@@ -469,6 +474,7 @@ export function deriveSidebarGroups(input: SidebarGroupsInput): SidebarGroupsRes
 			};
 		}),
 		defaultExpandedKeys,
+		primarySessions: [...input.sessions],
 	};
 }
 

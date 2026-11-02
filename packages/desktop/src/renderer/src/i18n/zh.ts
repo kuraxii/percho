@@ -17,25 +17,12 @@ export const zh = {
 		desc: "退出后，当前正在进行的任务会终止。",
 		confirm: "退出",
 	},
-	tabbar: {
-		untitled: "新会话",
-		settings: "设置",
-		close: "关闭会话（不删除）",
-		removeFromWorkspace: "从工作区移出（不关闭会话）",
+	/** 会话动作文案（右键菜单 + 改名气泡）：原 `tabbar.*`，顶栏胶囊删除后归到语义名下 */
+	sessionAction: {
 		rename: "重命名",
 		renamePlaceholder: "会话名称",
 		pin: "置顶",
 		unpin: "取消置顶",
-		sessionList: "会话列表",
-		/** 顶栏 × （v12 起 = 从临时工作区移出，不是关会话、也不是取消置顶） */
-	},
-	/** 左侧会话轨道（设置 → 外观；默认关） */
-	rail: {
-		/** nav 的无障碍名：一条就说明白怎么用（只能靠键盘逐条移出时尤其重要） */
-		ariaLabel: "会话轨道：上下方向键在条目间移动，Delete 或 Backspace 将当前条目移出工作区（不关闭会话）",
-	},
-	floatingList: {
-		title: "会话",
 	},
 	update: {
 		checkForUpdates: "检查更新",
@@ -330,6 +317,8 @@ export const zh = {
 		removeProjectDescEmpty: "该项目下暂无会话；你电脑上的项目文件不受影响。",
 		searchEmpty: "没有匹配的会话",
 		noSessions: "暂无会话",
+		/** 左栏「最近」分组（顶栏 tab 的替代：固定 8 条、跨项目、按最近打开排序） */
+		recent: "最近",
 		/** 会话树节点折叠箭头：收起子树（内存态，搜索强制展开时不显示） */
 		collapseNode: "收起子树",
 		expandNode: "展开子树",
@@ -427,9 +416,6 @@ export const zh = {
 		channelWatch: "跨会话频道协作（channel-watch）",
 		channelWatchHint:
 			"会话订阅频道后自动监听 .local/agent-work/channel/<主题>/ 的文件更新，另一会话写入时唤醒本会话查收（按 HANDOFF.md 沟通协议）。订阅经 appendEntry 持久化，重开会话自动恢复；内置防环保护。默认开启，对已信任项目完全生效。",
-		topBar: "顶栏显示会话",
-		topBarHint:
-			"顶栏常驻（窗口拖动、左栏开合、本轮改动都在这里）；关掉后顶栏不再显示临时会话工作区胶囊，会话都在左侧栏，临时工作区清空并停止记录。",
 		centerOrb: "居中放大状态动画",
 		centerOrbHint:
 			"任务运行时在对话区域中央显示放大的状态动画（盖在文字之上，半透明遮罩压暗身后文字——工作时专心看动画即可）。只控制中央动画，Working/Thinking 状态行前的小动画始终显示。",

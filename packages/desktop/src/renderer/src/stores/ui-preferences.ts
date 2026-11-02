@@ -44,9 +44,6 @@ interface UiPreferencesStore {
 	pinnedSessions: string[];
 	/** 按会话记住的权限模式（只存非 default；见 spec/permission-mode.md D7） */
 	sessionPermissionModes: Record<string, PermissionMode>;
-	/** 顶栏显隐（设置页开关，默认开）：关闭后导航全落在左侧栏 */
-	/** 顶栏是否显示临时会话工作区胶囊（顶栏本身常驻；设置页「顶栏显示会话」） */
-	barSessionsVisible: boolean;
 	/** 左侧栏收起（宽 0，彻底藏起；只有顶栏最左按钮能改，默认展开） */
 	sidebarCollapsed: boolean;
 	/**
@@ -94,8 +91,6 @@ interface UiPreferencesStore {
 	setCenterOrbEnabled: (enabled: boolean) => void;
 	/** 置顶 / 取消置顶（新置顶排最左） */
 	togglePin: (sessionId: string) => void;
-	setBarSessionsVisible: (visible: boolean) => void;
-	/** 左侧会话轨道开关（关掉最后一处时由 workspace store 侧订阅清空工作区，见 session-workspace.ts） */
 	/** 收起 / 展开左侧栏（宽 240 ↔ 0） */
 	toggleSidebarCollapsed: () => void;
 	/**
@@ -152,7 +147,6 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 	centerOrbEnabled: false,
 	pinnedSessions: [],
 	sessionPermissionModes: {},
-	barSessionsVisible: true,
 	sidebarCollapsed: false,
 	sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
 	/** 左侧栏展开分组的记录（`setExpandedGroups` 同时置 touched 位） */
@@ -184,7 +178,6 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 			centerOrbEnabled: saved?.centerOrbEnabled ?? false,
 			pinnedSessions: saved?.pinnedSessions ?? [],
 			sessionPermissionModes: saved?.sessionPermissionModes ?? {},
-			barSessionsVisible: saved?.barSessionsVisible ?? true,
 			sidebarCollapsed: saved?.sidebarCollapsed ?? false,
 			sidebarWidth: clampSidebarWidth(saved?.sidebarWidth),
 			terminalHeight: clampTerminalHeight(saved?.terminalHeight),
@@ -214,11 +207,6 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 	setCenterOrbEnabled: (enabled) => {
 		set({ centerOrbEnabled: enabled });
 		persistPatch({ centerOrbEnabled: enabled });
-	},
-
-	setBarSessionsVisible: (visible) => {
-		set({ barSessionsVisible: visible });
-		persistPatch({ barSessionsVisible: visible });
 	},
 
 	setLastCwd: (cwd) => {

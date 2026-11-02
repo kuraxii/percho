@@ -27,7 +27,6 @@ export {
 	isLatestUserIntent,
 } from "./session-navigation";
 
-import { useSessionWorkspaceStore } from "./session-workspace";
 import { useSubagentReturnStore } from "./subagent-return";
 import { pushToast } from "./toasts";
 import { useTranscriptStore } from "./transcript";
@@ -255,14 +254,6 @@ async function promoteDraft(draft: NewSessionDraftConfig): Promise<string | null
 				thinkingLevel: draft.thinkingLevel,
 			},
 		});
-		// 转正成功 = 用户刚开的会话 → 记入临时工作区（锚点 = 上一刻在看的成员，落在它右侧）。
-		// 迟到（已不是最新意图）只进工作区、不抢 activeFile（与下面的焦点处理同一口径）。
-		useSessionWorkspaceStore
-			.getState()
-			.addMember(
-				{ file: meta.sessionFile, sessionId: meta.sessionId },
-				{ activate: isLatestActivation(token) },
-			);
 		commitSessionState((state) => {
 			// 同 id 已存在就不再 append（与 open pipeline 同一套防御性去重）
 			const sessions = state.sessions.some((s) => s.sessionId === meta.sessionId)
@@ -654,11 +645,8 @@ export const useSessionsStore = create<SessionsStore>((_set, get) => ({
 		noteUserIntent();
 		try {
 			const meta = await getPi().forkSession({ sessionId: activeSessionId, ref });
-			// fork 出的是用户刚开的新会话 → 记入临时工作区；迟到（已不是最新意图）只入列表，不抢 activeFile
+			// fork 出的是用户刚开的新会话；迟到（已不是最新意图）只入列表，不抢焦点
 			const latest = isLatestActivation(token);
-			useSessionWorkspaceStore
-				.getState()
-				.addMember({ file: meta.sessionFile, sessionId: meta.sessionId }, { activate: latest });
 			set((state) => {
 				const sessions = [...state.sessions.filter((s) => s.sessionId !== meta.sessionId), meta];
 				// 迟到：新会话仍进 tabs，但不抢焦点
@@ -828,18 +816,3 @@ const sessionLoader = createSessionLoader({
 });
 // Bind the coordinator methods directly; no private forwarding facade.
 const { loadSessionBundle, restorePermissionMode, ensureOpenSession } = sessionLoader;
-
-/**
- * 工作区 `activeFile` 跟随当前会话：**唯一同步点**。
- *
- * activeFile 的语义是「重启后回到哪个成员」，所以只在当前会话确实是工作区成员时指向它；浏览新会话页、
- * 只读子代理检视等非成员页面时落 null（spec）。它**只管指针，绝不在这里加成员** —— 内存策略的卸载/
- * 重建、事件驱动的内部切换也会改 activeSessionId，订阅式加入会把用户已 × 掉的会话复活（spec 硬要求）。
- *
- * 放在本模块而不是 workspace 侧：依赖方向是 sessions → session-workspace，反向订阅会成模块环。
- */
-useSessionsStore.subscribe((state, prev) => {
-	if (state.activeSessionId === prev.activeSessionId) return;
-	const { members, setActive } = useSessionWorkspaceStore.getState();
-	setActive(members.find((m) => m.sessionId === state.activeSessionId)?.file ?? null);
-});

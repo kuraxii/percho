@@ -10,7 +10,6 @@ import {
 	clampUiFontSize,
 	type PermissionMode,
 	type Rect,
-	type SessionWorkspaceSnapshot,
 	sanitizeTerminalCopyOnSelection,
 	sanitizeTerminalCursorStyle,
 	sanitizeTerminalFontFamily,
@@ -60,34 +59,6 @@ function permissionModeMap(value: unknown): Record<string, PermissionMode> {
 	return out;
 }
 
-/** 会话文件路径数组清洗：trim → 去空 → 去重（保序）。与 `stringArray` 分开，不动它的既有语义 */
-function filePathArray(value: unknown): string[] {
-	if (!Array.isArray(value)) return [];
-	const seen = new Set<string>();
-	const out: string[] = [];
-	for (const item of value) {
-		if (typeof item !== "string") continue;
-		const path = item.trim();
-		if (path === "" || seen.has(path)) continue;
-		seen.add(path);
-		out.push(path);
-	}
-	return out;
-}
-
-/**
- * 工作区快照归一化：清洗 `files`（trim/去空/去重），`activeFile` 必须 ∈ files（否则 null）。
- * **顶栏显示关掉时强制清空**：关闭胶囊显示 = 清空工作区并停止采集（spec），
- * 旧文件里可能留着上次的快照 —— 不清掉会在下次开启时隔空复活一排胶囊。
- */
-function workspaceSnapshot(value: unknown, barVisible: boolean): SessionWorkspaceSnapshot {
-	if (!barVisible) return { files: [], activeFile: null };
-	const raw = (value ?? {}) as Partial<SessionWorkspaceSnapshot>;
-	const files = filePathArray(raw.files);
-	const active = typeof raw.activeFile === "string" ? raw.activeFile.trim() : "";
-	return { files, activeFile: active !== "" && files.includes(active) ? active : null };
-}
-
 /**
  * 窗口 bounds 清洗：四项都有限且不小于最小尺寸才收下，否则 `null`。
  * **不做屏幕校验**（模块约定：这里不 import `electron.screen`）——「这块屏还在不在」由启动时的
@@ -122,8 +93,6 @@ function normalize(parsed: UiStateFileShape): UiState {
 		typeof background?.dim === "number" && background.dim >= 0 && background.dim <= 1 ? background.dim : 0.8;
 	// 展开态：先清洗数组，再用它推断缺字段时的 touched（旧版「非空记录 = 已操作」语义）
 	const expandedGroups = stringArray(parsed.expandedGroups);
-	const barSessionsVisible =
-		typeof parsed.barSessionsVisible === "boolean" ? parsed.barSessionsVisible : true;
 	return {
 		lastUsedModel: model ? { provider: model.provider, modelId: model.modelId } : null,
 		lastUsedThinkingLevel: typeof level === "string" ? level : "medium",
@@ -133,9 +102,6 @@ function normalize(parsed: UiStateFileShape): UiState {
 		// 置顶列表：脏值（手改文件/旧版本）过滤成非空字符串数组（渲染侧另会忽略未知 id）
 		pinnedSessions: stringArray(parsed.pinnedSessions),
 		sessionPermissionModes: permissionModeMap(parsed.sessionPermissionModes),
-		// 顶栏是否显示工作区胶囊（旧字段 topBarVisible 已废弃：顶栏现在常驻，不再整条隐藏）
-		barSessionsVisible,
-		sessionWorkspace: workspaceSnapshot(parsed.sessionWorkspace, barSessionsVisible),
 		sidebarCollapsed: typeof parsed.sidebarCollapsed === "boolean" ? parsed.sidebarCollapsed : false,
 		// 侧栏宽度：脏值/越界一律归一化（手改文件、未来改上下界都在这里归一；renderer 只做渲染期夹紧、不回写）
 		sidebarWidth: clampSidebarWidth(parsed.sidebarWidth),

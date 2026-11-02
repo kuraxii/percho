@@ -26,11 +26,13 @@ UI 插件的槽位/区域标识以 shared `ui-plugins.ts` 为单源。新增对�
 | backend registry | 当前在册的 SDK 实例与资源所有权，不代表所有历史会话 |
 | renderer `sessions` | 已加载会话的运行态；GC 可以移出，不决定导航行是否存在 |
 | renderer `projects.allSessions` | 会话目录：磁盘对账 + 本进程新会话写穿；作为导航存在性来源 |
-| renderer `session-workspace` | 顶栏胶囊的有序成员；独立于内存加载状态与置顶偏好 |
-| renderer `pinnedSessions` | 左栏长期收藏与组内置顶，不决定顶栏成员或工作区顺序 |
+| renderer `pinnedSessions` | 左栏长期收藏与组内置顶 |
+| renderer `lastUsedAt` | 「最近」列表的排序键：你打开/切到该会话的时刻（不是 `modifiedAt`） |
 | renderer `transcript` | 历史回放 + 实时事件的 UI 投影，不直接修改 SDK 上下文 |
 
-因此：GC 不应让左栏行或工作区胶囊消失；胶囊的 × 是移出工作区，不是 close/delete/abort/unpin；只读子代理会话从导航投影中过滤，不能从运行态直接删掉。
+因此：GC 不应让左栏行消失；只读子代理会话从导航投影中过滤，不能从运行态直接删掉。
+
+左栏「最近」是**派生物**，没有成员表：由 `lib/recent-sessions.ts` 从 `projects.allSessions`（目录 ∪ 内存）按 `lastUsedAt` 取前 8 条，跨项目、不滚动。它接替了已删除的顶栏会话 tab —— 不要为它引入快照持久化，也不要加「加载更多」。
 
 会话时间以 header 和 user/assistant 消息时间为准，不用文件 birthtime；合并内存与历史 meta 时，不能用不完整的内存字段覆盖权威时间，造成排序漂移。
 
