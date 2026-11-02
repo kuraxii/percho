@@ -50,6 +50,9 @@ interface UiPreferencesStore {
 	 * 只记顺序，不记成员资格：日常会话、已删除/未加载的会话由派生层过滤（`lib/recent-sessions.ts`）。
 	 */
 	recentSessions: string[];
+	/** 左栏「最近」分组是否收起（与日常/项目组同一语义，只折自己的行） */
+	recentCollapsed: boolean;
+	toggleRecentCollapsed: () => void;
 	/** 按会话记住的权限模式（只存非 default；见 spec/permission-mode.md D7） */
 	sessionPermissionModes: Record<string, PermissionMode>;
 	/** 左侧栏收起（宽 0，彻底藏起；只有顶栏最左按钮能改，默认展开） */
@@ -159,6 +162,7 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 	centerOrbEnabled: false,
 	pinnedSessions: [],
 	recentSessions: [],
+	recentCollapsed: false,
 	sessionPermissionModes: {},
 	sidebarCollapsed: false,
 	sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
@@ -191,6 +195,7 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 			centerOrbEnabled: saved?.centerOrbEnabled ?? false,
 			pinnedSessions: saved?.pinnedSessions ?? [],
 			recentSessions: saved?.recentSessions ?? [],
+			recentCollapsed: saved?.recentCollapsed ?? false,
 			sessionPermissionModes: saved?.sessionPermissionModes ?? {},
 			sidebarCollapsed: saved?.sidebarCollapsed ?? false,
 			sidebarWidth: clampSidebarWidth(saved?.sidebarWidth),
@@ -301,6 +306,12 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 		if (enabled === get().terminalCopyOnSelection) return;
 		set({ terminalCopyOnSelection: enabled });
 		persistPatch({ terminalCopyOnSelection: enabled });
+	},
+
+	toggleRecentCollapsed: () => {
+		const collapsed = !get().recentCollapsed;
+		set({ recentCollapsed: collapsed });
+		persistPatch({ recentCollapsed: collapsed });
 	},
 
 	toggleSidebarCollapsed: () => {

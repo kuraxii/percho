@@ -3,6 +3,8 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { useT } from "../../i18n";
 import { recentProjectLabel } from "../../lib/recent-sessions";
 import { useProjectsStore } from "../../stores/projects";
+import { useUiPreferencesStore } from "../../stores/ui-preferences";
+import { ClockIcon } from "../icons";
 import { sessionTitle, useSessionStatus } from "../session/session-status";
 import type { MenuAnchor } from "../ui/place-menu";
 import { useSessionMenu } from "./SessionMenu";
@@ -75,10 +77,13 @@ function RecentRow({
 }
 
 /**
- * 「最近」分组（左栏「日常」之下、「项目」之上）：固定 `RECENT_LIMIT` 条、**不滚动、不分批、不能收起**。
+ * 「最近」分组（左栏「日常」之下、「项目」之上）：固定 `RECENT_LIMIT` 条、**不滚动、不分批**。
  *
- * 为什么不做成可折叠分组：它只有 8 行，收起反而多一次点击；真正的「收起」是左栏本身。
- * 为什么不分批（没有「显示更多」）：那会把跳板变成长列表，和下面的项目树重复。
+ * **可折叠，语义与日常/项目组完全同构**：点标题行折自己的行，收起态持久化（`ui-state.json` 的
+ * `recentCollapsed`），展开动画复用 `.sidebar-group-content` 的同一套 grid 过渡 —— 三组读起来是
+ * 一份列表的三种视图，不该有两种开合手感。
+ *
+ * 但仍然**不分批**（没有「显示更多」）：那会把跳板变成长列表，和下面的项目树重复。
  *
  * 数据：`recent` 由 Sidebar 用纯函数派生后传入（跨项目、按落盘的 `recentSessions` 顺序），本组件不排序、不裁剪 ——
  * 与 `SidebarSessionList` 同一纪律：显示层只画调用方给的这一段。
@@ -92,27 +97,51 @@ export function RecentSection({
 }) {
 	const t = useT();
 	const openSession = useProjectsStore((s) => s.openSession);
+	const collapsed = useUiPreferencesStore((s) => s.recentCollapsed);
+	const toggleCollapsed = useUiPreferencesStore((s) => s.toggleRecentCollapsed);
 	const sessionMenu = useSessionMenu();
 	// 空态**不渲染整个区块**：新装/新的一天还没有「最近」时，多一个空标题只是噪声
 	if (recent.length === 0) return null;
+	const expanded = !collapsed;
 	return (
-		<div data-sidebar-recent="">
-			{/* 标题行：与 `ProjectRow` 同高同缩进，但不可点击（不是分组开关，没有折叠语义） */}
-			<div
-				className="flex items-center gap-2 px-1.5 text-ui-14 font-medium text-ink-2"
-				style={{ height: ROW_HEIGHT }}
-			>
-				<span className="min-w-0 flex-1 truncate text-left">{t("sidebar.recent")}</span>
+		<div data-sidebar-recent="" data-sidebar-recent-collapsed={collapsed ? "true" : "false"}>
+			{/* 标题行：与 `ProjectRow` 同构（图标槽 16×16 + 标题 + 展开态样式），但不是项目组，
+			   没有「⋯」/「新会话」两个行末按钮，也不接受置顶 */}
+			<div className="group/row relative">
+				<button
+					type="button"
+					aria-expanded={expanded}
+					aria-label={t("sidebar.recent")}
+					title={t("sidebar.recent")}
+					className={`flex h-[34px] w-full items-center gap-2 rounded-[7px] px-1.5 text-ui-14 text-ink-2 group-hover/row:bg-hover group-hover/row:text-ink ${
+						expanded ? "text-ink" : ""
+					}`}
+					onClick={toggleCollapsed}
+				>
+					<span className="grid h-4 w-4 shrink-0 place-items-center" aria-hidden="true">
+						<ClockIcon size={16} />
+					</span>
+					<span className="min-w-0 flex-1 truncate text-left font-medium">{t("sidebar.recent")}</span>
+				</button>
 			</div>
-			{recent.map(({ session }) => (
-				<RecentRow
-					key={session.sessionId}
-					session={session}
-					active={session.sessionId === activeSessionId}
-					onSelect={() => void openSession(session)}
-					onContextMenu={(anchor) => sessionMenu.open(session, anchor)}
-				/>
-			))}
+			<div
+				data-sidebar-recent-content={expanded ? "expanded" : "collapsed"}
+				className={`sidebar-group-content ${expanded ? "is-expanded" : ""}`}
+				aria-hidden={!expanded}
+				inert={!expanded}
+			>
+				<div className="sidebar-group-content-inner">
+					{recent.map(({ session }) => (
+						<RecentRow
+							key={session.sessionId}
+							session={session}
+							active={session.sessionId === activeSessionId}
+							onSelect={() => void openSession(session)}
+							onContextMenu={(anchor) => sessionMenu.open(session, anchor)}
+						/>
+					))}
+				</div>
+			</div>
 			{sessionMenu.element}
 		</div>
 	);

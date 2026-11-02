@@ -28,6 +28,7 @@ beforeEach(() => {
 		centerOrbEnabled: false,
 		pinnedSessions: [],
 		recentSessions: [],
+		recentCollapsed: false,
 		sidebarCollapsed: false,
 		sidebarWidth: 240,
 		expandedGroups: [],
@@ -202,6 +203,18 @@ describe("useUiPreferencesStore", () => {
 			expect(ids).toHaveLength(RECENT_SESSION_LIMIT);
 			expect(ids[0]).toBe(`s${RECENT_SESSION_LIMIT + 2}`);
 			expect(ids).not.toContain("s0");
+		});
+
+		it("recentCollapsed 默认展开；toggle 落盘（与日常/项目组的开合同一语义）", async () => {
+			expect(useUiPreferencesStore.getState().recentCollapsed).toBe(false);
+
+			piMock.loadUiState.mockResolvedValue({ recentCollapsed: true });
+			await useUiPreferencesStore.getState().init();
+			expect(useUiPreferencesStore.getState().recentCollapsed).toBe(true);
+
+			useUiPreferencesStore.getState().toggleRecentCollapsed();
+			expect(useUiPreferencesStore.getState().recentCollapsed).toBe(false);
+			expect(piMock.saveUiState).toHaveBeenLastCalledWith({ state: { recentCollapsed: false } });
 		});
 
 		it("forgetRecentSession 移除并落盘；不在表里则不写", () => {

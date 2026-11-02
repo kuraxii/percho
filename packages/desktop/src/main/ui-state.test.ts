@@ -230,6 +230,25 @@ describe("recentSessions 白名单（左栏「最近」的落盘顺序）", () =
 	});
 });
 
+describe("recentCollapsed 白名单（「最近」分组的开合）", () => {
+	it("缺字段 → false（旧文件与首次启动都展开）", async () => {
+		writeFileSync(file(), "{}");
+		expect((await loadUiState())?.recentCollapsed).toBe(false);
+	});
+
+	it("写入后读回：true 保留", async () => {
+		await saveUiState({ recentCollapsed: true });
+		expect((await loadUiState())?.recentCollapsed).toBe(true);
+	});
+
+	it("非布尔（字符串/数字/null）一律回落 false，不炸启动", async () => {
+		for (const raw of ['{"recentCollapsed":"true"}', '{"recentCollapsed":1}', '{"recentCollapsed":null}']) {
+			writeFileSync(file(), raw);
+			expect((await loadUiState())?.recentCollapsed, raw).toBe(false);
+		}
+	});
+});
+
 describe("windowBounds 白名单（normal 态窗口位置与尺寸）", () => {
 	it("缺字段 / 没记过 → null", async () => {
 		writeFileSync(file(), "{}");

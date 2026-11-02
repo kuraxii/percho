@@ -39,6 +39,11 @@ export interface UiState {
 	 */
 	recentSessions: string[];
 	/**
+	 * 左栏「最近」分组是否收起（**与日常/项目组同一语义**：只折自己的行，不影响同级）。
+	 * 只存 app 本地 ui-state.json；旧版本文件缺省为 false（展开）。
+	 */
+	recentCollapsed: boolean;
+	/**
 	 * **按会话记住的权限模式**（只存非 `default` 的项，切回默认就删键）。
 	 * 只存 app 本地 ui-state.json，**不写进 pi 的会话 jsonl**（那是 SDK 文件格式）；新会话/fork 仍从 default 起步。
 	 */

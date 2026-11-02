@@ -104,6 +104,8 @@ function normalize(parsed: UiStateFileShape): UiState {
 		pinnedSessions: stringArray(parsed.pinnedSessions),
 		// 「最近」列表：去空/去重后按上限裁剪（renderer 每次顶到最前时已裁，这里再裁一次是给脏文件兜底）
 		recentSessions: [...new Set(stringArray(parsed.recentSessions))].slice(0, RECENT_SESSION_LIMIT),
+		// 「最近」分组收起：缺字段/脏值 → 展开（旧文件与首次启动都没有这条记录）
+		recentCollapsed: typeof parsed.recentCollapsed === "boolean" ? parsed.recentCollapsed : false,
 		sessionPermissionModes: permissionModeMap(parsed.sessionPermissionModes),
 		sidebarCollapsed: typeof parsed.sidebarCollapsed === "boolean" ? parsed.sidebarCollapsed : false,
 		// 侧栏宽度：脏值/越界一律归一化（手改文件、未来改上下界都在这里归一；renderer 只做渲染期夹紧、不回写）
