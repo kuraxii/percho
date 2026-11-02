@@ -1326,20 +1326,6 @@ code {
 	opacity: 0;
 	transform: translateX(-28px);
 }
-/* 终端最大化时收起侧栏：瞬变（无动画），由 TerminalDock 的 maximized 状态驱动（不写 store 的 sidebarCollapsed，避免持久化折叠）。 */
-.sidebar.is-terminal-collapsed {
-	width: 0;
-	/* 终端场景无动画：覆盖 .sidebar 基类的 width 过渡与 .sidebar-inner 的内容层过渡（点图标开合仍保留原动画） */
-	transition: none;
-}
-.sidebar.is-terminal-collapsed::after {
-	display: none;
-}
-.sidebar.is-terminal-collapsed .sidebar-inner {
-	opacity: 0;
-	transform: translateX(-28px);
-	transition: none;
-}
 /* 分组展开/收起：grid 0fr→1fr 让未知高度（空态/任意行数的列表）共用一套动画，
    内层 overflow:hidden 只负责裁切；列表自己**不滚**（整条左栏只有一个外层滚动容器，v13 统一滚动）。 */
 .sidebar-group-content {
