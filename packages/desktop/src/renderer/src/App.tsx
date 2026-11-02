@@ -8,7 +8,6 @@ import { SubagentBackButton } from "./components/chat/SubagentBackButton";
 import { TodoPanel } from "./components/chat/TodoPanel";
 import { DiffSidebar } from "./components/diff/DiffSidebar";
 import { DockSlot } from "./components/session/DockSlot";
-import { SessionRail } from "./components/session/SessionRail";
 import { SessionTabBar } from "./components/session/SessionTabBar";
 import { TrustDialog } from "./components/session/TrustDialog";
 import { SettingsDialog } from "./components/settings/SettingsDialog";
@@ -147,9 +146,6 @@ export default function App() {
 							data-session-page=""
 							data-session-id={activeSessionId ?? ""}
 						>
-							{/* 左侧会话轨道（临时工作区）：挂在 main + DockSlot 的父容器上，定位基准是 tab bar 以下的整列内容区——
-						    输入框高度变化不压缩它的居中参考系；收起态是纯覆盖层，不占宽、不挤压聊天布局（设置里默认关） */}
-							<SessionRail />
 							{/* 右侧 DiffSidebar 是独立浮层，不参与中间聊天列宽度与布局动画。 */}
 							<main className="relative min-h-0 flex-1">
 								{showEmpty ? <EmptyState /> : <MessageList />}

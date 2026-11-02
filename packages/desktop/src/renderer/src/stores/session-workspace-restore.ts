@@ -27,7 +27,7 @@ import {
 export async function restoreSessionWorkspace(): Promise<void> {
 	// 幂等：本次进程已经有成员 = 已恢复过（含 StrictMode 下 effect 重放），或用户已自己开了会话 —— 两种都不该再来一遍
 	if (useSessionWorkspaceStore.getState().members.length > 0) return;
-	// 双关（顶栏 + 轨道都关）：工作区语义上就是空的，不恢复也不写盘
+	// 顶栏胶囊显示关掉：工作区语义上就是空的，不恢复也不写盘
 	if (!isWorkspaceRecording()) return;
 	// 用户已经开着会话了（例如恢复链被重放过两次）：不抢焦点、也不必再读偏好
 	if (useSessionsStore.getState().activeSessionId !== null) return;

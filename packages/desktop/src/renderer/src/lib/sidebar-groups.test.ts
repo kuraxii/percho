@@ -215,9 +215,7 @@ describe("deriveSidebarGroups · 血缘树形化", () => {
 		const grandchild = fork("grandchild", P1, 300, child.sessionFile);
 		const result = derive({ sessions: [root, child, grandchild], projects: [project(P1, 0)] });
 		const alpha = result.projects.find((p) => p.cwd === P1);
-		const counts = new Map(
-			alpha?.sessions.map((s) => [s.session.sessionId, s.subtreeCount]) ?? [],
-		);
+		const counts = new Map(alpha?.sessions.map((s) => [s.session.sessionId, s.subtreeCount]) ?? []);
 		expect(counts.get("root")).toBe(1); // 直接子：child
 		expect(counts.get("child")).toBe(1); // 直接子：grandchild
 		expect(counts.get("grandchild")).toBe(0);

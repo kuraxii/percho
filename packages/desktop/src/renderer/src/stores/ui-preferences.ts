@@ -47,8 +47,6 @@ interface UiPreferencesStore {
 	/** 顶栏显隐（设置页开关，默认开）：关闭后导航全落在左侧栏 */
 	/** 顶栏是否显示临时会话工作区胶囊（顶栏本身常驻；设置页「顶栏显示会话」） */
 	barSessionsVisible: boolean;
-	/** 左侧会话短线轨道开关（设置页，默认**关**）；与顶栏开关各自独立，两个都关则清空工作区 */
-	sessionRailEnabled: boolean;
 	/** 左侧栏收起（宽 0，彻底藏起；只有顶栏最左按钮能改，默认展开） */
 	sidebarCollapsed: boolean;
 	/**
@@ -98,7 +96,6 @@ interface UiPreferencesStore {
 	togglePin: (sessionId: string) => void;
 	setBarSessionsVisible: (visible: boolean) => void;
 	/** 左侧会话轨道开关（关掉最后一处时由 workspace store 侧订阅清空工作区，见 session-workspace.ts） */
-	setSessionRailEnabled: (enabled: boolean) => void;
 	/** 收起 / 展开左侧栏（宽 240 ↔ 0） */
 	toggleSidebarCollapsed: () => void;
 	/**
@@ -156,7 +153,6 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 	pinnedSessions: [],
 	sessionPermissionModes: {},
 	barSessionsVisible: true,
-	sessionRailEnabled: false,
 	sidebarCollapsed: false,
 	sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
 	/** 左侧栏展开分组的记录（`setExpandedGroups` 同时置 touched 位） */
@@ -189,7 +185,6 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 			pinnedSessions: saved?.pinnedSessions ?? [],
 			sessionPermissionModes: saved?.sessionPermissionModes ?? {},
 			barSessionsVisible: saved?.barSessionsVisible ?? true,
-			sessionRailEnabled: saved?.sessionRailEnabled ?? false,
 			sidebarCollapsed: saved?.sidebarCollapsed ?? false,
 			sidebarWidth: clampSidebarWidth(saved?.sidebarWidth),
 			terminalHeight: clampTerminalHeight(saved?.terminalHeight),
@@ -224,11 +219,6 @@ export const useUiPreferencesStore = create<UiPreferencesStore>((set, get) => ({
 	setBarSessionsVisible: (visible) => {
 		set({ barSessionsVisible: visible });
 		persistPatch({ barSessionsVisible: visible });
-	},
-
-	setSessionRailEnabled: (enabled) => {
-		set({ sessionRailEnabled: enabled });
-		persistPatch({ sessionRailEnabled: enabled });
 	},
 
 	setLastCwd: (cwd) => {

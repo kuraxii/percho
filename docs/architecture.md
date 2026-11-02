@@ -26,7 +26,7 @@ UI 插件的槽位/区域标识以 shared `ui-plugins.ts` 为单源。新增对�
 | backend registry | 当前在册的 SDK 实例与资源所有权，不代表所有历史会话 |
 | renderer `sessions` | 已加载会话的运行态；GC 可以移出，不决定导航行是否存在 |
 | renderer `projects.allSessions` | 会话目录：磁盘对账 + 本进程新会话写穿；作为导航存在性来源 |
-| renderer `session-workspace` | 顶栏胶囊和轨道的有序成员；独立于内存加载状态与置顶偏好 |
+| renderer `session-workspace` | 顶栏胶囊的有序成员；独立于内存加载状态与置顶偏好 |
 | renderer `pinnedSessions` | 左栏长期收藏与组内置顶，不决定顶栏成员或工作区顺序 |
 | renderer `transcript` | 历史回放 + 实时事件的 UI 投影，不直接修改 SDK 上下文 |
 

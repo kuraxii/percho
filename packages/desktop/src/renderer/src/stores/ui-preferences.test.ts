@@ -27,7 +27,6 @@ beforeEach(() => {
 		centerOrbEnabled: false,
 		pinnedSessions: [],
 		barSessionsVisible: true,
-		sessionRailEnabled: false,
 		sidebarCollapsed: false,
 		sidebarWidth: 240,
 		expandedGroups: [],
@@ -92,26 +91,16 @@ describe("useUiPreferencesStore", () => {
 			expect(state.pinnedProjects).toEqual(["/work/alpha"]);
 		});
 
-		it("默认：顶栏开、轨道关（旧文件缺 rail 字段）", async () => {
+		it("默认：顶栏开（旧文件缺字段）", async () => {
 			piMock.loadUiState.mockResolvedValue({});
 			await useUiPreferencesStore.getState().init();
-			const state = useUiPreferencesStore.getState();
-			expect(state.barSessionsVisible).toBe(true);
-			expect(state.sessionRailEnabled).toBe(false);
+			expect(useUiPreferencesStore.getState().barSessionsVisible).toBe(true);
 		});
 
-		it("init 恢复两个独立开关", async () => {
-			piMock.loadUiState.mockResolvedValue({ barSessionsVisible: false, sessionRailEnabled: true });
+		it("init 恢复顶栏开关", async () => {
+			piMock.loadUiState.mockResolvedValue({ barSessionsVisible: false });
 			await useUiPreferencesStore.getState().init();
-			const state = useUiPreferencesStore.getState();
-			expect(state.barSessionsVisible).toBe(false);
-			expect(state.sessionRailEnabled).toBe(true);
-		});
-
-		it("setSessionRailEnabled 落盘补丁（与顶栏开关各自独立）", () => {
-			useUiPreferencesStore.getState().setSessionRailEnabled(true);
-			expect(useUiPreferencesStore.getState().sessionRailEnabled).toBe(true);
-			expect(piMock.saveUiState).toHaveBeenLastCalledWith({ state: { sessionRailEnabled: true } });
+			expect(useUiPreferencesStore.getState().barSessionsVisible).toBe(false);
 		});
 
 		it("四项各自落盘补丁（顶栏显隐 / 收起 / 展开分组 / 项目置顶）", () => {

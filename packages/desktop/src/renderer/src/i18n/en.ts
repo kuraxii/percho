@@ -440,10 +440,7 @@ export const en: Messages = {
 			"After a session subscribes to a channel it watches .local/agent-work/channel/<topic>/ for file updates; writes from another session wake this session to pick them up (per the HANDOFF.md protocol). Subscriptions persist via appendEntry and restore on session reopen; built-in loop protection. On by default, fully effective for trusted projects.",
 		topBar: "Show sessions in the top bar",
 		topBarHint:
-			"The top bar is always there (window dragging, sidebar toggle, current changes). Turn this off and it simply stops showing the temporary-workspace pills — every session stays in the left sidebar.",
-		sessionRail: "Left session rail",
-		sessionRailHint:
-			"A column of short lines at the left edge of the chat area (off by default): hover or focus expands one into a capsule with its title and status. The rail and the top bar show the same temporary workspace; turning both off clears it (running tasks are unaffected — they just stop being recorded).",
+			"The top bar is always there (window dragging, sidebar toggle, current changes). Turn this off and it stops showing the temporary-workspace pills — every session stays in the left sidebar, and the workspace is cleared and stops being recorded.",
 		centerOrb: "Centered status animation",
 		centerOrbHint:
 			"While a task is running, shows an enlarged status animation at the center of the conversation area (above the text, with a translucent scrim dimming whatever is behind it). Only controls the centered animation — the small orb before the Working/Thinking row always stays.",

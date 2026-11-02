@@ -189,10 +189,9 @@ export function resolveMembersByFile(
 	return out;
 }
 
-/** 是否在采集成员：**两个显示入口都关掉就停止记录**（spec：双关 = 清空并停止采集） */
+/** 是否在采集成员：**顶栏胶囊显示关掉就停止记录**（spec：关 = 清空并停止采集） */
 export function isWorkspaceRecording(): boolean {
-	const prefs = useUiPreferencesStore.getState();
-	return prefs.barSessionsVisible || prefs.sessionRailEnabled;
+	return useUiPreferencesStore.getState().barSessionsVisible;
 }
 
 /**
@@ -254,7 +253,7 @@ interface SessionWorkspaceStore {
 	/**
 	 * 用户打开会话时记入工作区：已存在只激活、不挪位；新成员插在当前成员（`anchorFile`，
 	 * 缺省 = `activeFile`）右侧，无锚点追加末尾。`activate: false`（迟到结果）只入表不抢 activeFile。
-	 * 返回 false = 没记（双关停止采集 / 文件或 id 缺失）。
+	 * 返回 false = 没记（显示关掉停止采集 / 文件或 id 缺失）。
 	 */
 	addMember: (
 		input: { file?: string | null; sessionId?: string | null },
@@ -287,7 +286,7 @@ interface SessionWorkspaceStore {
 	hydrateFromSnapshot: (members: unknown, activeFile: string | null) => void;
 	/** 磁盘对账裁剪：失效项移出；被裁掉的正是 active 时 → 空态 */
 	prune: (isAlive: (member: WorkspaceMember) => boolean) => void;
-	/** 清空成员（双关、或用户显式清空）：**不导航、不关会话**，只换代次 */
+	/** 清空成员（显示关掉、或用户显式清空）：**不导航、不关会话**，只换代次 */
 	clear: () => void;
 }
 
@@ -423,19 +422,14 @@ export const useSessionWorkspaceStore = create<SessionWorkspaceStore>((set, get)
 }));
 
 /**
- * 开关联动的**唯一触发点**：两个显示入口都关掉 → 同步清空工作区（清空 ≠ 关闭会话，也不改当前聊天）。
+ * 开关联动的**唯一触发点**：顶栏胶囊显示关掉 → 同步清空工作区（清空 ≠ 关闭会话，也不改当前聊天）。
  *
  * 订阅（而不是在开关 setter 里调回来）是为了守住单向依赖：本模块 → ui-preferences。
  * 代价是「本模块必须被 import 才会生效」——`stores/sessions.ts` 在阶段 2 起 import 它，
  * 只要 App 起来就一定在（settings 面板也只在 App 里能点）。
  */
 useUiPreferencesStore.subscribe((state, prev) => {
-	if (
-		state.barSessionsVisible === prev.barSessionsVisible &&
-		state.sessionRailEnabled === prev.sessionRailEnabled
-	) {
-		return;
-	}
-	if (state.barSessionsVisible || state.sessionRailEnabled) return;
+	if (state.barSessionsVisible === prev.barSessionsVisible) return;
+	if (state.barSessionsVisible) return;
 	useSessionWorkspaceStore.getState().clear();
 });

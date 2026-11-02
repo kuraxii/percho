@@ -1,8 +1,8 @@
 import type { SessionMeta } from "@percho/shared";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useT } from "../../i18n";
-import { PinIcon } from "../icons";
 import type { RowGuide } from "../../lib/sidebar-groups";
+import { PinIcon } from "../icons";
 import { sessionTitle, useSessionStatus } from "../session/session-status";
 import type { MenuAnchor } from "../ui/place-menu";
 

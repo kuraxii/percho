@@ -299,7 +299,6 @@ describe("工作区接线 · projects", () => {
 		useSessionsStore.setState({ sessions: [], activeSessionId: null, cwd: null, lastUsedAt: {} });
 		useUiPreferencesStore.setState({
 			barSessionsVisible: true,
-			sessionRailEnabled: false,
 			pinnedSessions: [],
 		});
 	});

@@ -30,8 +30,8 @@ const filesOf = (members: readonly WorkspaceMember[]) => members.map((m) => m.fi
 
 function resetStores(): void {
 	useSessionWorkspaceStore.setState({ members: [], activeFile: null, epoch: 0 });
-	// 两个开关一次写回，避免触发「双关清空」的订阅分支
-	useUiPreferencesStore.setState({ barSessionsVisible: true, sessionRailEnabled: false });
+	// 开关一次写回，避免触发「关掉显示 → 清空」的订阅分支
+	useUiPreferencesStore.setState({ barSessionsVisible: true });
 }
 
 beforeEach(async () => {
@@ -549,34 +549,20 @@ describe("useSessionWorkspaceStore（记录与持久化）", () => {
 	});
 });
 
-describe("显示开关联动（双关 = 清空 + 停止采集）", () => {
-	it("顶栏开（默认）时记录；两个都关时不记录", () => {
+describe("显示开关联动（关 = 清空 + 停止采集）", () => {
+	it("顶栏开（默认）时记录；关时不记录", () => {
 		expect(isWorkspaceRecording()).toBe(true);
-		useUiPreferencesStore.setState({ barSessionsVisible: false, sessionRailEnabled: false });
+		useUiPreferencesStore.setState({ barSessionsVisible: false });
 		expect(isWorkspaceRecording()).toBe(false);
 		expect(useSessionWorkspaceStore.getState().addMember(member("a"))).toBe(false);
 		expect(useSessionWorkspaceStore.getState().members).toEqual([]);
 	});
 
-	it("只关一处不清空（轨道关、顶栏开 → 成员保留）", () => {
+	it("关掉顶栏显示 → 同步清空 + 换代次 + 落盘空快照（不导航，store 不管导航）", async () => {
 		useSessionWorkspaceStore.getState().addMember(member("a"));
-		useUiPreferencesStore.getState().setBarSessionsVisible(true);
-		useUiPreferencesStore.getState().setSessionRailEnabled(false);
-		expect(filesOf(useSessionWorkspaceStore.getState().members)).toEqual(["/a.jsonl"]);
-
-		// 顶栏关、轨道开 → 也不清
-		useUiPreferencesStore.getState().setSessionRailEnabled(true);
-		useUiPreferencesStore.getState().setBarSessionsVisible(false);
-		expect(filesOf(useSessionWorkspaceStore.getState().members)).toEqual(["/a.jsonl"]);
-	});
-
-	it("关掉最后一处 → 同步清空 + 换代次 + 落盘空快照（不导航，store 不管导航）", async () => {
-		useSessionWorkspaceStore.getState().addMember(member("a"));
-		useUiPreferencesStore.getState().setSessionRailEnabled(false);
 		expect(isWorkspaceRecording()).toBe(true);
 		const epoch = useSessionWorkspaceStore.getState().epoch;
 
-		// 此时顶栏仍开着：关掉顶栏 = 最后一处
 		useUiPreferencesStore.getState().setBarSessionsVisible(false);
 		expect(useSessionWorkspaceStore.getState().members).toEqual([]);
 		expect(useSessionWorkspaceStore.getState().activeFile).toBeNull();
@@ -593,7 +579,7 @@ describe("显示开关联动（双关 = 清空 + 停止采集）", () => {
 		useUiPreferencesStore.getState().setBarSessionsVisible(false);
 		expect(useSessionWorkspaceStore.getState().members).toEqual([]);
 
-		useUiPreferencesStore.getState().setSessionRailEnabled(true);
+		useUiPreferencesStore.getState().setBarSessionsVisible(true);
 		expect(useSessionWorkspaceStore.getState().members).toEqual([]);
 		// 重新开启后从下一次「用户打开会话」开始记
 		expect(useSessionWorkspaceStore.getState().addMember(member("b"))).toBe(true);

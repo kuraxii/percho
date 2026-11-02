@@ -76,8 +76,6 @@ function AppearanceBasics() {
 	const setBackgroundDim = useThemeStore((s) => s.setBackgroundDim);
 	const barSessionsVisible = useUiPreferencesStore((s) => s.barSessionsVisible);
 	const setBarSessionsVisible = useUiPreferencesStore((s) => s.setBarSessionsVisible);
-	const sessionRailEnabled = useUiPreferencesStore((s) => s.sessionRailEnabled);
-	const setSessionRailEnabled = useUiPreferencesStore((s) => s.setSessionRailEnabled);
 	const centerOrbEnabled = useUiPreferencesStore((s) => s.centerOrbEnabled);
 	const setCenterOrbEnabled = useUiPreferencesStore((s) => s.setCenterOrbEnabled);
 	const uiFontSize = useUiPreferencesStore((s) => s.uiFontSize);
@@ -179,13 +177,6 @@ function AppearanceBasics() {
 					<Switch checked={barSessionsVisible} onCheckedChange={setBarSessionsVisible} />
 				</div>
 				<p className="mt-0.5 text-ui-11 leading-relaxed text-ink-faint">{t("settings.topBarHint")}</p>
-			</div>
-			<div>
-				<div className="flex items-center justify-between gap-4">
-					<h3 className="text-ui-13 font-medium text-ink">{t("settings.sessionRail")}</h3>
-					<Switch checked={sessionRailEnabled} onCheckedChange={setSessionRailEnabled} />
-				</div>
-				<p className="mt-0.5 text-ui-11 leading-relaxed text-ink-faint">{t("settings.sessionRailHint")}</p>
 			</div>
 			<div>
 				<div className="flex items-center justify-between gap-4">

@@ -8,14 +8,14 @@ import {
 	clampTerminalLineHeight,
 	clampTerminalScrollback,
 	clampUiFontSize,
+	type PermissionMode,
+	type Rect,
+	type SessionWorkspaceSnapshot,
 	sanitizeTerminalCopyOnSelection,
 	sanitizeTerminalCursorStyle,
 	sanitizeTerminalFontFamily,
 	sanitizeTerminalGpuAcceleration,
 	sanitizeTerminalTitleMode,
-	type PermissionMode,
-	type Rect,
-	type SessionWorkspaceSnapshot,
 	type UiState,
 } from "@percho/shared";
 import { app } from "electron";
@@ -77,15 +77,11 @@ function filePathArray(value: unknown): string[] {
 
 /**
  * 工作区快照归一化：清洗 `files`（trim/去空/去重），`activeFile` 必须 ∈ files（否则 null）。
- * **两个显示入口都关掉时强制清空**：关掉两处 = 清空工作区并停止采集（spec），
+ * **顶栏显示关掉时强制清空**：关闭胶囊显示 = 清空工作区并停止采集（spec），
  * 旧文件里可能留着上次的快照 —— 不清掉会在下次开启时隔空复活一排胶囊。
  */
-function workspaceSnapshot(
-	value: unknown,
-	barVisible: boolean,
-	railEnabled: boolean,
-): SessionWorkspaceSnapshot {
-	if (!barVisible && !railEnabled) return { files: [], activeFile: null };
+function workspaceSnapshot(value: unknown, barVisible: boolean): SessionWorkspaceSnapshot {
+	if (!barVisible) return { files: [], activeFile: null };
 	const raw = (value ?? {}) as Partial<SessionWorkspaceSnapshot>;
 	const files = filePathArray(raw.files);
 	const active = typeof raw.activeFile === "string" ? raw.activeFile.trim() : "";
@@ -128,9 +124,6 @@ function normalize(parsed: UiStateFileShape): UiState {
 	const expandedGroups = stringArray(parsed.expandedGroups);
 	const barSessionsVisible =
 		typeof parsed.barSessionsVisible === "boolean" ? parsed.barSessionsVisible : true;
-	// 轨道开关缺省 false：老用户的 `barSessionsVisible:false` 缺 rail 字段时 = 双关 → 保持关 + 工作区空
-	const sessionRailEnabled =
-		typeof parsed.sessionRailEnabled === "boolean" ? parsed.sessionRailEnabled : false;
 	return {
 		lastUsedModel: model ? { provider: model.provider, modelId: model.modelId } : null,
 		lastUsedThinkingLevel: typeof level === "string" ? level : "medium",
@@ -142,8 +135,7 @@ function normalize(parsed: UiStateFileShape): UiState {
 		sessionPermissionModes: permissionModeMap(parsed.sessionPermissionModes),
 		// 顶栏是否显示工作区胶囊（旧字段 topBarVisible 已废弃：顶栏现在常驻，不再整条隐藏）
 		barSessionsVisible,
-		sessionRailEnabled,
-		sessionWorkspace: workspaceSnapshot(parsed.sessionWorkspace, barSessionsVisible, sessionRailEnabled),
+		sessionWorkspace: workspaceSnapshot(parsed.sessionWorkspace, barSessionsVisible),
 		sidebarCollapsed: typeof parsed.sidebarCollapsed === "boolean" ? parsed.sidebarCollapsed : false,
 		// 侧栏宽度：脏值/越界一律归一化（手改文件、未来改上下界都在这里归一；renderer 只做渲染期夹紧、不回写）
 		sidebarWidth: clampSidebarWidth(parsed.sidebarWidth),

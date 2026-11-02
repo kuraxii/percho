@@ -49,14 +49,9 @@ export interface UiState {
 	sessionPermissionModes: Record<string, PermissionMode>;
 	/**
 	 * 顶栏**是否显示临时会话工作区的胶囊**（顶栏本身常驻：窗口拖动、左栏开合、变更侧栏入口都在这里）。
-	 * 关闭后顶栏不再出胶囊，会话全在左侧栏；旧版本文件的 `topBarVisible` 已废弃（缺省 true）。
+	 * 关闭后顶栏不再出胶囊，会话全在左侧栏，临时工作区清空并停止采集；旧版本文件的 `topBarVisible` 已废弃（缺省 true）。
 	 */
 	barSessionsVisible: boolean;
-	/**
-	 * 左侧会话短线轨道开关（缺省 false = 不显示）。与 `barSessionsVisible` 相互独立：
-	 * 只关一处不清空工作区；**两处都关掉**才清空快照并停止采集。
-	 */
-	sessionRailEnabled: boolean;
 	/**
 	 * 临时会话工作区快照（缺省空）。存的是**文件路径**而不是内存会话：重启只按需加载
 	 * `activeFile` 一条，其余成员靠历史目录投影画胶囊。

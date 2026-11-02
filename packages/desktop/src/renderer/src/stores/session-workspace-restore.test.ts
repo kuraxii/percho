@@ -53,7 +53,7 @@ function resetStores(): void {
 		loading: false,
 		loaded: false,
 	});
-	useUiPreferencesStore.setState({ barSessionsVisible: true, sessionRailEnabled: false });
+	useUiPreferencesStore.setState({ barSessionsVisible: true });
 }
 
 beforeEach(async () => {
@@ -141,8 +141,8 @@ describe("restoreSessionWorkspace（冷启动恢复）", () => {
 		expect(useSessionWorkspaceStore.getState().members).toEqual([]);
 	});
 
-	it("两个显示入口都关：不恢复（工作区语义上就是空的）", async () => {
-		useUiPreferencesStore.setState({ barSessionsVisible: false, sessionRailEnabled: false });
+	it("顶栏显示关：不恢复（工作区语义上就是空的）", async () => {
+		useUiPreferencesStore.setState({ barSessionsVisible: false });
 		piMock.loadUiState.mockResolvedValue({
 			sessionWorkspace: { files: [FILE_A], activeFile: FILE_A },
 		});
@@ -241,8 +241,8 @@ describe("restoreSessionWorkspace（冷启动恢复）", () => {
 			sessionWorkspace: { files: [FILE_A, FILE_B], activeFile: FILE_B },
 		});
 		piMock.listAllSessions.mockImplementation(() => {
-			// 用户在恢复在途时关掉两处开关 → 工作区清空 + 代次自增
-			useUiPreferencesStore.setState({ barSessionsVisible: false, sessionRailEnabled: false });
+			// 用户在恢复在途时关掉顶栏显示 → 工作区清空 + 代次自增
+			useUiPreferencesStore.setState({ barSessionsVisible: false });
 			return Promise.resolve([meta("a", FILE_A), meta("b", FILE_B)]);
 		});
 

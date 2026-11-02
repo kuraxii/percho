@@ -97,11 +97,10 @@ describe("expandedGroupsTouched 迁移与读写（空数组不再兼任「未操
 });
 
 describe("sessionWorkspace 白名单（临时会话工作区）", () => {
-	it("默认：工作区空 + 轨道关（旧文件无这些字段）", async () => {
+	it("默认：工作区空（旧文件无这些字段）", async () => {
 		writeFileSync(file(), "{}");
 		const state = await loadUiState();
 		expect(state?.sessionWorkspace).toEqual({ files: [], activeFile: null });
-		expect(state?.sessionRailEnabled).toBe(false);
 		expect(state?.barSessionsVisible).toBe(true);
 	});
 
@@ -137,19 +136,18 @@ describe("sessionWorkspace 白名单（临时会话工作区）", () => {
 		}
 	});
 
-	it("两个显示入口都关掉时强制清空（即使文件里留着上次的快照）", async () => {
+	it("顶栏显示关掉时强制清空（即使文件里留着上次的快照）", async () => {
 		writeFileSync(
 			file(),
 			JSON.stringify({
 				barSessionsVisible: false,
-				sessionRailEnabled: false,
 				sessionWorkspace: { files: ["/a.jsonl"], activeFile: "/a.jsonl" },
 			}),
 		);
 		expect((await loadUiState())?.sessionWorkspace).toEqual({ files: [], activeFile: null });
 	});
 
-	it("旧用户 barSessionsVisible:false 且缺 rail 字段 → 保持关 + 工作区空", async () => {
+	it("旧用户 barSessionsVisible:false → 保持关 + 工作区空", async () => {
 		writeFileSync(
 			file(),
 			JSON.stringify({
@@ -159,16 +157,15 @@ describe("sessionWorkspace 白名单（临时会话工作区）", () => {
 		);
 		const state = await loadUiState();
 		expect(state?.barSessionsVisible).toBe(false);
-		expect(state?.sessionRailEnabled).toBe(false);
 		expect(state?.sessionWorkspace).toEqual({ files: [], activeFile: null });
 	});
 
-	it("只关一处不清空（轨道单开时成员保留）", async () => {
+	it("已废弃的 sessionRailEnabled 字段被忽略，不影响快照保留", async () => {
 		writeFileSync(
 			file(),
 			JSON.stringify({
-				barSessionsVisible: false,
-				sessionRailEnabled: true,
+				barSessionsVisible: true,
+				sessionRailEnabled: false,
 				sessionWorkspace: { files: ["/a.jsonl", "/b.jsonl"], activeFile: "/a.jsonl" },
 			}),
 		);
@@ -183,16 +180,15 @@ describe("sessionWorkspace 白名单（临时会话工作区）", () => {
 		const state = await loadUiState();
 		expect(state?.pinnedSessions).toEqual(["s1", "s2"]);
 		expect(state?.sessionWorkspace).toEqual({ files: [], activeFile: null });
-		expect(state?.sessionRailEnabled).toBe(false);
 	});
 
 	it("同一次保存补丁可同时改开关与快照（读回一致）", async () => {
 		await saveUiState({
-			sessionRailEnabled: true,
+			barSessionsVisible: true,
 			sessionWorkspace: { files: ["/a.jsonl", "/b.jsonl"], activeFile: "/b.jsonl" },
 		});
 		const state = await loadUiState();
-		expect(state?.sessionRailEnabled).toBe(true);
+		expect(state?.barSessionsVisible).toBe(true);
 		expect(state?.sessionWorkspace).toEqual({ files: ["/a.jsonl", "/b.jsonl"], activeFile: "/b.jsonl" });
 	});
 });
