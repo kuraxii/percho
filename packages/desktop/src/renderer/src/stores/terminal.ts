@@ -399,6 +399,10 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
 					activeGroupId = neighbor?.id ?? null;
 				}
 				activePaneId = null;
+				// 一个终端都不剩 → 连面板一起收起（vscode：关掉最后一个实例即隐藏面板），
+				// 不留下空态"没有打开的终端"页面
+				if (groups.length === 0)
+					return { groups, activeGroupId, activePaneId, open: false, maximized: false };
 			} else {
 				groups = groups.map((g) => (g.id === hit.group.id ? { ...g, root } : g));
 			}

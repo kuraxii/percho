@@ -146,8 +146,6 @@ export const zh = {
 		resize: "拖动调整高度",
 		split: "分屏",
 		clear: "清屏",
-		empty: "没有打开的终端",
-		openNew: "打开新终端",
 		maximize: "最大化",
 		restore: "还原",
 		hide: "隐藏终端",

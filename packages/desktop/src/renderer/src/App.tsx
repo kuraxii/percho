@@ -140,9 +140,10 @@ export default function App() {
 					   切会话时终端保持静止（同顶栏/侧栏）。静态显示与移出前一致（终端仍是聊天区宽、聊天区底部）。 */}
 					<div className="relative flex min-w-0 flex-1 flex-col">
 						{/* 聊天页容器：会话推/出过渡的动画主体（lib/session-page-slide.ts 认 data-session-page 找它，
-						   用 data-session-id 判定「新内容已上屏」）。顶栏与左栏不在此容器内 ⇒ 导航时保持静态 */}
+						   用 data-session-id 判定「新内容已上屏」）。顶栏与左栏不在此容器内 ⇒ 导航时保持静态。
+						   终端最大化时整列让给终端（hidden，瞬变）——否则 flex-1 会继续占着剩余高度，终端只能左右铺满 */}
 						<div
-							className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+							className={`relative min-h-0 min-w-0 flex-1 flex-col ${terminalMaximized ? "hidden" : "flex"}`}
 							data-session-page=""
 							data-session-id={activeSessionId ?? ""}
 						>

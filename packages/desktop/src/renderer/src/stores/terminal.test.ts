@@ -320,4 +320,41 @@ describe("terminal 开合与最大化（无动画）", () => {
 		useTerminalStore.getState().hide();
 		expect(useTerminalStore.getState().open).toBe(false);
 	});
+
+	it("关闭最后一个 tab → 一个终端不剩时面板一并收起（不留「没有打开的终端」空态）", () => {
+		useTerminalStore.setState({
+			open: true,
+			groups: [],
+			activeGroupId: null,
+			activePaneId: null,
+			maximized: true,
+		});
+		const tabId = useTerminalStore.getState().newTerminal();
+		// 最大化中关掉唯一终端：open 与 maximized 都要归零（否则面板空转、顶栏/侧栏仍收着）
+		useTerminalStore.getState().setMaximized(true);
+		useTerminalStore.getState().closeTab(tabId);
+		const s = useTerminalStore.getState();
+		expect(s.groups).toEqual([]);
+		expect(s.open).toBe(false);
+		expect(s.maximized).toBe(false);
+		expect(s.activeGroupId).toBeNull();
+	});
+
+	it("还有其它终端时关掉一个 group → 面板保持打开（只切到相邻 group）", () => {
+		useTerminalStore.setState({
+			open: true,
+			groups: [],
+			activeGroupId: null,
+			activePaneId: null,
+			maximized: false,
+		});
+		const first = useTerminalStore.getState().newTerminal();
+		useTerminalStore.getState().newTerminal();
+		useTerminalStore.getState().closeTab(first);
+		const s = useTerminalStore.getState();
+		expect(s.groups).toHaveLength(1);
+		expect(s.open).toBe(true);
+		expect(s.activeGroupId).toBe(s.groups[0]?.id);
+		useTerminalStore.setState({ open: false, groups: [], activeGroupId: null, activePaneId: null });
+	});
 });

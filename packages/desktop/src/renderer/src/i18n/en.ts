@@ -149,8 +149,6 @@ export const en: Messages = {
 		resize: "Drag to resize",
 		split: "Split terminal",
 		clear: "Clear terminal",
-		empty: "No terminals open",
-		openNew: "Open a new terminal",
 		maximize: "Maximize",
 		restore: "Restore",
 		hide: "Hide terminal",

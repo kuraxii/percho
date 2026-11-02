@@ -325,7 +325,7 @@ function ToolbarButton({
  *   （保留滚动条与 WebGL 缓冲区，切换零重建）；
  * - 右侧竖排 tab 列表按 group 分组（vscode tabs.location: 'right'）。
  */
-export function TerminalDock(): React.JSX.Element {
+export function TerminalDock(): React.JSX.Element | null {
 	const t = useT();
 	const groups = useTerminalStore((s) => s.groups);
 	const activeGroupId = useTerminalStore((s) => s.activeGroupId);
@@ -366,8 +366,16 @@ export function TerminalDock(): React.JSX.Element {
 		window.addEventListener("pointerup", onUp);
 	};
 
+	// 一个终端都没有：面板整体不渲染（关闭最后一个 tab 时 store 会同时收起 open，这里再兑一层）
+	if (groups.length === 0) return null;
+
 	return (
-		<div className="relative flex min-h-0 flex-col border-t border-border bg-surface" style={{ height }}>
+		<div
+			className={`relative flex min-h-0 flex-col border-t border-border bg-surface ${
+				maximized ? "min-h-0 flex-1" : ""
+			}`}
+			style={maximized ? undefined : { height }}
+		>
 			{/* 拖拽命中区 = 终端顶部边缘整条（无视觉手柄、无 hover 变色）：纯命中区，hover 仅光标变 ns-resize。最大化时无意义不显示 */}
 			{!maximized && (
 				<div
@@ -406,35 +414,20 @@ export function TerminalDock(): React.JSX.Element {
 			{/* 内容区（左，激活 group 的 split 树）+ 右侧 tab 列表；overflow-hidden 裁剪动画期间 xterm 内容溢出 */}
 			<div className="relative flex min-h-0 flex-1 overflow-hidden p-1 pt-0">
 				<div className="relative min-h-0 min-w-0 flex-1">
-					{groups.length > 0 ? (
-						groups.map((group) => (
-							<div
-								key={group.id}
-								className={
-									group.id === activeGroupId
-										? "absolute inset-0"
-										: "absolute inset-0 invisible pointer-events-none"
-								}
-							>
-								<TerminalSplitView node={group.root} groupId={group.id} focusHandles={focusHandlesRef} />
-							</div>
-						))
-					) : (
-						<div className="flex h-full flex-col items-center justify-center gap-2 text-ui-12 text-ink-faint">
-							<span>{t("terminal.empty")}</span>
-							<button
-								type="button"
-								className="flex items-center gap-1 rounded-md px-2 py-1 text-ui-12 text-ink-2 transition-colors hover:bg-hover"
-								title={t("terminal.openNew")}
-								onClick={() => useTerminalStore.getState().newTerminal()}
-							>
-								<PlusIcon size={12} />
-								{t("terminal.openNew")}
-							</button>
+					{groups.map((group) => (
+						<div
+							key={group.id}
+							className={
+								group.id === activeGroupId
+									? "absolute inset-0"
+									: "absolute inset-0 invisible pointer-events-none"
+							}
+						>
+							<TerminalSplitView node={group.root} groupId={group.id} focusHandles={focusHandlesRef} />
 						</div>
-					)}
+					))}
 				</div>
-				{groups.length > 0 && <TabList />}
+				<TabList />
 			</div>
 		</div>
 	);
